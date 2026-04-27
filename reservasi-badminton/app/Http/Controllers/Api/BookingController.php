@@ -192,24 +192,59 @@ class BookingController extends Controller
                 'total_amount' => $booking->payment->amount,
                 'paid_amount' => $booking->payment->paid_amount,
                 'remaining_amount' => $booking->payment->remaining_amount,
+                'remaining_notice' => $this->buildRemainingNotice($booking->payment),
                 'paid_at' => $booking->payment->paid_at,
+                'payment_details' => $booking->payment->details
+                    ->sortByDesc('created_at')
+                    ->values()
+                    ->map(fn ($detail) => $this->formatPaymentDetail($detail)),
             ] : null,
             'created_at' => $booking->created_at,
             'updated_at' => $booking->updated_at,
         ];
     }
 
+    private function formatPaymentDetail($detail)
+    {
+        return [
+            'id_payment_detail' => $detail->id,
+            'amount' => $detail->amount,
+            'verified_amount' => $detail->verified_amount,
+            'payment_method' => $detail->payment_method,
+            'proof_file' => $detail->proof_file,
+            'status' => $detail->status,
+            'notes' => $detail->notes,
+            'verified_by' => $detail->verifiedBy ? [
+                'id_user' => $detail->verifiedBy->id,
+                'name' => $detail->verifiedBy->name,
+                'email' => $detail->verifiedBy->email,
+            ] : null,
+            'verified_at' => $detail->verified_at,
+            'created_at' => $detail->created_at,
+            'updated_at' => $detail->updated_at,
+        ];
+    }
+
+    private function buildRemainingNotice($payment): ?string
+    {
+        if ((float) $payment->remaining_amount <= 0 || (float) $payment->paid_amount <= 0) {
+            return null;
+        }
+
+        return 'Pembayaran kurang Rp '.number_format((float) $payment->remaining_amount, 0, ',', '.');
+    }
+
     // GET /api/my-bookings
     public function myBookings(Request $request)
     {
-        $bookings = Booking::with(['court.sport', 'user', 'payment'])
+        $bookings = Booking::with(['court.sport', 'user', 'payment.details.verifiedBy'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
 
         $this->bookingPaymentStatusService->syncCollection($bookings);
 
-        $bookings = Booking::with(['court.sport', 'user', 'payment'])
+        $bookings = Booking::with(['court.sport', 'user', 'payment.details.verifiedBy'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get()
@@ -254,7 +289,7 @@ class BookingController extends Controller
         $bookings = $query->latest()->get();
         $this->bookingPaymentStatusService->syncCollection($bookings);
 
-        $bookings = $query->with('payment')->latest()->get();
+        $bookings = $query->with('payment.details.verifiedBy')->latest()->get();
 
         $data = $bookings->map(function ($booking) {
             return $this->formatBooking($booking);
@@ -270,7 +305,7 @@ class BookingController extends Controller
     // GET /api/bookings/{id} (admin)
     public function show($id)
     {
-        $booking = Booking::with(['court.sport', 'user', 'payment'])->find($id);
+        $booking = Booking::with(['court.sport', 'user', 'payment.details.verifiedBy'])->find($id);
 
         if (! $booking) {
             return response()->json([
@@ -279,7 +314,7 @@ class BookingController extends Controller
             ], 404);
         }
 
-        $booking = $this->bookingPaymentStatusService->syncBooking($booking)->load(['court.sport', 'user', 'payment']);
+        $booking = $this->bookingPaymentStatusService->syncBooking($booking)->load(['court.sport', 'user', 'payment.details.verifiedBy']);
 
         return response()->json([
             'status' => true,

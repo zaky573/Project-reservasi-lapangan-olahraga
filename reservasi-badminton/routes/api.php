@@ -60,6 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/payments/{bookingId}', [PaymentController::class, 'store']);
     Route::post('/payments/{bookingId}/upload-proof', [PaymentController::class, 'uploadProof']);
+    Route::post('/payments/{bookingId}/details', [PaymentController::class, 'storeDetail']);
+    Route::get('/payments/{bookingId}/details', [PaymentController::class, 'details']);
 
     // Schedule
     Route::get('/schedules', [ScheduleController::class, 'index']);
@@ -89,6 +91,8 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     // Payment management
     Route::get('/payments', [PaymentController::class, 'index']);
     Route::put('/payments/{id}/verify', [PaymentController::class, 'verify']);
+    Route::put('/payment-details/{id}/verify', [PaymentController::class, 'verifyDetail']);
+    Route::post('/payments/{bookingId}/cash-payment', [PaymentController::class, 'storeCashPayment']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

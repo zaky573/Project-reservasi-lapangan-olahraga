@@ -34,4 +34,9 @@ class Payment extends Model
     {
         return $this->belongsTo(Booking::class);
     }
+
+    public function details()
+    {
+        return $this->hasMany(PaymentDetail::class);
+    }
 }
