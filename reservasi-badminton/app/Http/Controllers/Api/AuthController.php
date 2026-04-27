@@ -267,13 +267,20 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $redirectTo = match ($user->role) {
+            'admin', 'super_admin' => '/dashboard',
+            default => '/sports',
+        };
 
         return response()->json([
             'status' => true,
             'message' => 'Login berhasil',
+            'token' => $token,
             'data' => [
                 'user' => $user,
                 'token' => $token,
+                'role' => $user->role,
+                'redirect_to' => $redirectTo,
             ],
         ]);
     }

@@ -23,14 +23,8 @@ Route::post('/register/resend-otp', [AuthController::class, 'resendRegisterOtp']
 Route::post('/forgot-password/request-otp', [AuthController::class, 'requestForgotPasswordOtp']);
 Route::post('/forgot-password/verify-otp', [AuthController::class, 'verifyForgotPasswordOtp']);
 
-// USER LOGIN
-Route::post('/login', [AuthController::class, 'loginUser']);
-
-// ADMIN LOGIN
-Route::post('/admin/login', [AuthController::class, 'loginAdmin']);
-
-// SUPER ADMIN LOGIN
-Route::post('/super-admin/login', [AuthController::class, 'loginSuperAdmin']);
+// Login semua role: user, admin, super_admin
+Route::post('/login', [AuthController::class, 'login']);
 
 /*
 |--------------------------------------------------------------------------
