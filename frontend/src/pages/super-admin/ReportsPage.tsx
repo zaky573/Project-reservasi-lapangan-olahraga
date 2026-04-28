@@ -1,69 +1,152 @@
-import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { apiClient } from '../../lib/api';
 import { formatCurrency } from '../../lib/utils';
-import { Calendar, Download, TrendingUp, Users, MapPin } from 'lucide-react';
+import { Calendar, Download, TrendingUp, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
+type ReportRow = {
+  no: number;
+  id_payment: string | number;
+  booking_date: string;
+  time_slot: string;
+  customer_name: string;
+  court_name: string;
+  sport_name: string;
+  total_booking_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
+  payment_method: string;
+  payment_status: string;
+  status: string;
+};
+
+type ReportData = {
+  generated_at: string;
+  total_bookings: number;
+  total_booking_amount: number;
+  total_paid_amount: number;
+  total_remaining_amount: number;
+  total_revenue: number;
+  status_summary: Record<string, number>;
+  sport_summary: Array<{ sport_name: string; total_bookings: number }>;
+  rows: ReportRow[];
+};
+
+type ApiResponse<T> = {
+  status: boolean;
+  message: string;
+  data: T;
+};
+
+const today = new Date();
+const defaultStartDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+const defaultEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    dibooking: 'Dibooking',
+    sedang_digunakan: 'Sedang Digunakan',
+    selesai: 'Selesai',
+    dibatalkan: 'Dibatalkan',
+    menunggu: 'Menunggu',
+    pembayaran_awal: 'Pembayaran Awal',
+    verifikasi_pembayaran_sisa: 'Verifikasi Pembayaran Sisa',
+    lunas: 'Lunas',
+  };
+
+  return labels[status] || status || '-';
+}
+
 export function ReportsPage() {
-  const { bookings, payments, courts, sports } = useAuth();
-  const [startDate, setStartDate] = useState('2026-04-01');
-  const [endDate, setEndDate] = useState('2026-04-30');
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState('');
 
-  const filteredBookings = bookings.filter((b) => {
-    const bookingDate = new Date(b.date);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return bookingDate >= start && bookingDate <= end;
-  });
+  const loadReport = async () => {
+    setLoading(true);
+    setError('');
 
-  const filteredPayments = payments.filter((p) => {
-    const paymentDate = new Date(p.created_at);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return paymentDate >= start && paymentDate <= end && p.status === 'paid';
-  });
+    try {
+      const response = await apiClient.get<ApiResponse<ReportData>>('/reports/bookings', {
+        start_date: startDate,
+        end_date: endDate,
+      });
 
-  const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
-  const totalBookings = filteredBookings.length;
-  const averagePerBooking = totalBookings > 0 ? totalRevenue / totalBookings : 0;
-
-  const revenueByDate = filteredPayments.reduce((acc, payment) => {
-    const date = payment.created_at.split('T')[0];
-    if (!acc[date]) {
-      acc[date] = 0;
+      setReport(response.data);
+    } catch (err: any) {
+      setReport(null);
+      setError(err?.message || 'Gagal memuat laporan.');
+    } finally {
+      setLoading(false);
     }
-    acc[date] += payment.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  };
 
-  const revenueChartData = Object.entries(revenueByDate)
-    .map(([date, amount]) => ({
+  useEffect(() => {
+    loadReport();
+  }, [startDate, endDate]);
+
+  const downloadPdf = async () => {
+    setDownloading(true);
+    setError('');
+
+    try {
+      const blob = await apiClient.downloadBlob('/reports/bookings', {
+        start_date: startDate,
+        end_date: endDate,
+        export: 'pdf',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rekap-booking-${startDate}-sampai-${endDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err?.message || 'Gagal membuat PDF.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const revenueChartData = useMemo(() => {
+    const revenueByDate = (report?.rows || []).reduce((acc, row) => {
+      if (!acc[row.booking_date]) {
+        acc[row.booking_date] = 0;
+      }
+
+      acc[row.booking_date] += Number(row.paid_amount || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(revenueByDate).map(([date, amount]) => ({
       date: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       revenue: amount,
-    }))
-    .slice(0, 10);
+    }));
+  }, [report]);
 
-  const bookingsBySport = sports.map((sport) => {
-    const sportBookings = filteredBookings.filter((b) => {
-      const court = courts.find((c) => c.id === b.court_id);
-      return court?.sport_id === sport.id;
-    });
+  const bookingsBySport = useMemo(() => {
+    return (report?.sport_summary || []).map((item) => ({
+      name: item.sport_name,
+      bookings: item.total_bookings,
+    }));
+  }, [report]);
 
-    const sportRevenue = sportBookings.reduce((sum, b) => sum + b.total_price, 0);
-
-    return {
-      name: sport.name,
-      bookings: sportBookings.length,
-      revenue: sportRevenue,
-    };
-  });
+  const averagePerBooking = report && report.total_bookings > 0
+    ? report.total_paid_amount / report.total_bookings
+    : 0;
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-        <p className="text-muted-foreground mt-2">Analisis booking dan pendapatan</p>
+        <p className="text-muted-foreground mt-2">Preview rekap booking sebelum diunduh sebagai PDF</p>
       </div>
 
       <Card className="mb-8">
@@ -74,26 +157,40 @@ export function ReportsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Dari</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div>
+                <label className="block text-sm text-muted-foreground mb-1">Dari</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-1">Sampai</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Sampai</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={loadReport} disabled={loading}>
+                {loading ? 'Memuat...' : 'Tampilkan Data'}
+              </Button>
+              <Button variant="primary" onClick={downloadPdf} disabled={!report || downloading}>
+                <Download className="w-4 h-4 mr-2" />
+                {downloading ? 'Membuat PDF...' : 'Download PDF'}
+              </Button>
             </div>
           </div>
+          {error && (
+            <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -102,8 +199,8 @@ export function ReportsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Pendapatan</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(totalRevenue)}</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Terbayar</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(report?.total_paid_amount || 0)}</p>
               </div>
               <div className="bg-primary/10 p-3 rounded-lg">
                 <TrendingUp className="w-8 h-8 text-primary" />
@@ -117,7 +214,7 @@ export function ReportsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total Booking</p>
-                <p className="text-2xl font-bold text-foreground">{totalBookings}</p>
+                <p className="text-2xl font-bold text-foreground">{report?.total_bookings || 0}</p>
               </div>
               <div className="bg-secondary/10 p-3 rounded-lg">
                 <Calendar className="w-8 h-8 text-secondary" />
@@ -130,7 +227,7 @@ export function ReportsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Rata-rata/Booking</p>
+                <p className="text-sm text-muted-foreground mb-1">Rata-rata Terbayar</p>
                 <p className="text-2xl font-bold text-foreground">{formatCurrency(averagePerBooking)}</p>
               </div>
               <div className="bg-accent/10 p-3 rounded-lg">
@@ -141,10 +238,55 @@ export function ReportsPage() {
         </Card>
       </div>
 
+      <Card className="mb-8">
+        <CardHeader>
+          <h2 className="text-xl font-semibold text-foreground">Preview Data Rekap</h2>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">No</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tanggal</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Customer</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Lapangan</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jam</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Booking</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Terbayar</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Sisa</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(report?.rows || []).map((row) => (
+                  <tr key={`${row.no}-${row.id_payment}`} className="border-b border-border hover:bg-muted/50">
+                    <td className="py-3 px-4 text-muted-foreground">{row.no}</td>
+                    <td className="py-3 px-4">{new Date(row.booking_date).toLocaleDateString('id-ID')}</td>
+                    <td className="py-3 px-4 font-medium text-foreground">{row.customer_name}</td>
+                    <td className="py-3 px-4">{row.court_name}</td>
+                    <td className="py-3 px-4">{row.time_slot}</td>
+                    <td className="py-3 px-4 text-primary font-medium">{formatCurrency(row.total_booking_amount)}</td>
+                    <td className="py-3 px-4 text-primary font-medium">{formatCurrency(row.paid_amount)}</td>
+                    <td className="py-3 px-4">{formatCurrency(row.remaining_amount)}</td>
+                    <td className="py-3 px-4">{statusLabel(row.status)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!loading && (report?.rows || []).length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                Tidak ada data pada periode ini
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-foreground">Pendapatan per Hari</h2>
+            <h2 className="text-xl font-semibold text-foreground">Terbayar per Hari</h2>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -161,7 +303,7 @@ export function ReportsPage() {
 
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-foreground">Booking & Pendapatan per Sport</h2>
+            <h2 className="text-xl font-semibold text-foreground">Booking per Sport</h2>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>

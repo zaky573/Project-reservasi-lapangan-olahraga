@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Court;
+use App\Models\Sport;
 use Illuminate\Http\Request;
 
 class CourtController extends Controller
@@ -47,6 +48,7 @@ class CourtController extends Controller
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
+                    'code' => $court->sport->code,
                 ] : null,
             ];
         });
@@ -84,6 +86,7 @@ class CourtController extends Controller
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
+                    'code' => $court->sport->code,
                 ] : null,
             ],
         ]);
@@ -95,11 +98,13 @@ class CourtController extends Controller
         $validated = $request->validate([
             'sport_id' => 'required|exists:sports,id',
             'name' => 'required',
-            'code' => 'required|unique:courts,code',
+            'code' => 'nullable|unique:courts,code',
             'price_per_hour' => 'required|numeric',
-            'status' => 'required|in:active,inactive',
+            'status' => 'required|in:active,inactive,maintenance',
             'description' => 'nullable',
         ]);
+
+        $validated['code'] = $validated['code'] ?: $this->generateCourtCode((int) $validated['sport_id']);
 
         $court = Court::create($validated);
         $court->load('sport');
@@ -119,6 +124,7 @@ class CourtController extends Controller
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
+                    'code' => $court->sport->code,
                 ] : null,
             ],
         ], 201);
@@ -139,11 +145,13 @@ class CourtController extends Controller
         $validated = $request->validate([
             'sport_id' => 'required|exists:sports,id',
             'name' => 'required',
-            'code' => 'required|unique:courts,code,'.$id,
+            'code' => 'nullable|unique:courts,code,'.$id,
             'price_per_hour' => 'required|numeric',
-            'status' => 'required|in:active,inactive',
+            'status' => 'required|in:active,inactive,maintenance',
             'description' => 'nullable',
         ]);
+
+        $validated['code'] = $validated['code'] ?: $this->generateCourtCode((int) $validated['sport_id'], (int) $id);
 
         $court->update($validated);
         $court->load('sport');
@@ -163,6 +171,7 @@ class CourtController extends Controller
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
+                    'code' => $court->sport->code,
                 ] : null,
             ],
         ]);
@@ -186,5 +195,40 @@ class CourtController extends Controller
             'status' => true,
             'message' => 'Lapangan berhasil dihapus',
         ]);
+    }
+
+    private function generateCourtCode(int $sportId, ?int $ignoreCourtId = null): string
+    {
+        $sport = Sport::findOrFail($sportId);
+        $prefix = strtoupper($sport->code);
+        $query = Court::where('sport_id', $sportId);
+
+        if ($ignoreCourtId) {
+            $query->where('id', '!=', $ignoreCourtId);
+        }
+
+        $numbers = $query
+            ->pluck('code')
+            ->map(function ($code) use ($prefix) {
+                if (! preg_match('/^'.preg_quote($prefix, '/').'-(\d+)$/', (string) $code, $matches)) {
+                    return null;
+                }
+
+                return (int) $matches[1];
+            })
+            ->filter()
+            ->values();
+
+        $nextNumber = ($numbers->max() ?? 0) + 1;
+
+        do {
+            $code = $prefix.'-'.str_pad((string) $nextNumber, 2, '0', STR_PAD_LEFT);
+            $exists = Court::where('code', $code)
+                ->when($ignoreCourtId, fn ($query) => $query->where('id', '!=', $ignoreCourtId))
+                ->exists();
+            $nextNumber++;
+        } while ($exists);
+
+        return $code;
     }
 }

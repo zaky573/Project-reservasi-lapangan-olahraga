@@ -9,12 +9,11 @@ import { Court, Sport, TimeSlot, Booking, Payment, PaymentMethod } from '../data
 import { Calendar, Clock, MapPin, CreditCard, Banknote, Upload, FileImage, X } from 'lucide-react';
 
 export function BookingPage() {
-  const CASH_DP_AMOUNT = 25000;
   const BANK_ACCOUNT_INFO = 'BCA 1234567890 a/n THE ARENA';
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, addBooking, addPayment } = useAuth();
+  const { currentUser, createBookingWithPayment } = useAuth();
 
   const { court, sport, slot, slots, date } = (location.state || {}) as {
     court: Court;
@@ -49,7 +48,7 @@ export function BookingPage() {
   const bookingEndTime = bookingSlots[bookingSlots.length - 1].end_time;
   const bookingDuration = bookingSlots.length;
   const totalPrice = court.price_per_hour * bookingDuration;
-  const paymentAmount = paymentMethod === 'cash' ? Math.min(CASH_DP_AMOUNT, totalPrice) : totalPrice;
+  const paymentAmount = paymentMethod === 'cash' ? Math.round(totalPrice * 0.25) : totalPrice;
   const remainingCashPayment = Math.max(totalPrice - paymentAmount, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,38 +74,27 @@ export function BookingPage() {
 
     setLoading(true);
 
-    const newBooking: Booking = {
-      id: String(Date.now()),
-      user_id: currentUser?.id || 'guest',
-      court_id: court.id,
-      date,
-      start_time: bookingStartTime,
-      end_time: bookingEndTime,
-      total_price: totalPrice,
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-    };
+    try {
+      const result = await createBookingWithPayment({
+        court_id: court.id,
+        booking_date: date,
+        start_time: bookingStartTime,
+        end_time: bookingEndTime,
+        customer_name: customerName,
+        phone: customerPhone,
+        payment_method: paymentMethod,
+        amount: paymentAmount,
+        proof_file: proofFile,
+      });
 
-    addBooking(newBooking);
-
-    const newPayment: Payment = {
-      id: String(Date.now()),
-      booking_id: newBooking.id,
-      amount: paymentAmount,
-      method: paymentMethod,
-      status: 'pending_verification',
-      proof_url: proofFile ? URL.createObjectURL(proofFile) : undefined,
-      created_at: new Date().toISOString(),
-    };
-
-    addPayment(newPayment);
-
-    setTimeout(() => {
       setLoading(false);
-      navigate('/booking-success', { state: { booking: newBooking, payment: newPayment } });
-    }, 1000);
+      navigate('/booking-success', { state: result });
+    } catch (error: any) {
+      setErrors({
+        submit: error?.message || 'Booking gagal diproses. Pastikan jadwal masih tersedia.',
+      });
+      setLoading(false);
+    }
   };
 
   return (
@@ -199,7 +187,7 @@ export function BookingPage() {
                       >
                         <Banknote className="w-8 h-8 mx-auto mb-2 text-primary" />
                         <p className="font-medium text-foreground">Cash</p>
-                        <p className="text-xs text-muted-foreground">DP transfer Rp 25.000, sisanya bayar di tempat</p>
+                        <p className="text-xs text-muted-foreground">Bayar DP 25% sekarang, sisanya dibayar di tempat</p>
                       </button>
                       <button
                         type="button"
@@ -212,7 +200,7 @@ export function BookingPage() {
                       >
                         <CreditCard className="w-8 h-8 mx-auto mb-2 text-primary" />
                         <p className="font-medium text-foreground">Transfer</p>
-                        <p className="text-xs text-muted-foreground">Upload bukti</p>
+                        <p className="text-xs text-muted-foreground">Wajib transfer 100% sesuai total booking</p>
                       </button>
                     </div>
                   </div>
@@ -224,8 +212,8 @@ export function BookingPage() {
                     <div className="p-4 border-2 border-dashed border-border rounded-lg bg-muted/20">
                       <p className="text-sm font-medium text-foreground mb-1">
                         {paymentMethod === 'cash'
-                          ? 'Pembayaran cash tetap wajib DP terlebih dahulu.'
-                          : 'Silakan transfer full payment ke rekening berikut.'}
+                          ? 'Metode cash tetap wajib membayar DP 25% terlebih dahulu.'
+                          : 'Metode transfer wajib membayar 100% dari total booking.'}
                       </p>
                       <p className="text-sm text-muted-foreground mb-2">
                         Transfer ke: {BANK_ACCOUNT_INFO}
@@ -233,7 +221,7 @@ export function BookingPage() {
                       <p className="text-sm text-muted-foreground mb-3">
                         {paymentMethod === 'cash'
                           ? `Nominal DP yang harus ditransfer: ${formatCurrency(paymentAmount)}. Sisa pembayaran ${formatCurrency(remainingCashPayment)} dibayar saat datang ke lokasi.`
-                          : `Nominal yang harus ditransfer: ${formatCurrency(paymentAmount)}.`}
+                          : `Nominal transfer penuh yang harus dibayar: ${formatCurrency(paymentAmount)}.`}
                       </p>
                       <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-border bg-background px-4 py-6 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
                         <Upload className="w-8 h-8 text-primary mb-3" />
@@ -293,6 +281,9 @@ export function BookingPage() {
                   >
                     {loading ? 'Memproses...' : 'Konfirmasi Booking'}
                   </Button>
+                  {errors.submit && (
+                    <p className="text-destructive text-sm">{errors.submit}</p>
+                  )}
                 </form>
               </CardContent>
             </Card>

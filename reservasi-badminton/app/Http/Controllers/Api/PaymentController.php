@@ -205,7 +205,7 @@ class PaymentController extends Controller
     public function verify(Request $request, $id)
     {
         $request->validate([
-            'payment_status' => 'nullable|in:menunggu,dibayar_sebagian,lunas,sedang_digunakan,ditolak',
+            'payment_status' => 'nullable|in:pembayaran_awal,verifikasi_pembayaran_sisa,lunas',
             'paid_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
@@ -219,13 +219,22 @@ class PaymentController extends Controller
             ], 404);
         }
 
+        $allowedStatuses = $payment->payment_method === 'cash'
+            ? ['pembayaran_awal', 'verifikasi_pembayaran_sisa', 'lunas']
+            : ['verifikasi_pembayaran_sisa', 'lunas'];
+
+        if ($request->payment_status && ! in_array($request->payment_status, $allowedStatuses, true)) {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Status pembayaran tidak sesuai metode pembayaran.'],
+            ]);
+        }
+
         if (
-            $request->payment_status === 'dibayar_sebagian'
-            && $payment->payment_method === 'transfer'
+            $request->payment_status === 'verifikasi_pembayaran_sisa'
             && $request->paid_amount === null
         ) {
             throw ValidationException::withMessages([
-                'paid_amount' => ['Nominal pembayaran wajib diisi untuk transfer yang dibayar sebagian.'],
+                'paid_amount' => ['Nominal pembayaran yang sudah masuk wajib diisi.'],
             ]);
         }
 
@@ -245,7 +254,7 @@ class PaymentController extends Controller
 
             $payment->update(array_merge($amounts, [
                 'payment_status' => $paymentStatus,
-                'paid_at' => in_array($paymentStatus, ['lunas', 'sedang_digunakan'], true) ? now() : null,
+                'paid_at' => $paymentStatus === 'lunas' ? now() : null,
             ]));
 
             $this->syncLatestDetailFromPaymentVerification(
@@ -399,7 +408,7 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        if (in_array($booking->status, ['cancelled', 'completed'], true)) {
+        if (in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Booking tidak bisa dibayar',
@@ -442,6 +451,7 @@ class PaymentController extends Controller
                 ->values()
                 ->map(fn ($detail) => $this->formatPaymentDetail($detail)),
             'booking' => $payment->booking ? $this->formatPaymentBooking($payment, $includeFullBooking) : null,
+            'whatsapp_url' => $payment->booking ? $this->buildWhatsappUrl($payment) : null,
             'created_at' => $payment->created_at,
             'updated_at' => $payment->updated_at,
         ];
@@ -501,6 +511,7 @@ class PaymentController extends Controller
             'id_user' => $booking->user->id,
             'name' => $booking->user->name,
             'email' => $booking->user->email,
+            'phone' => $booking->user->phone,
         ] : null;
 
         return $data;
@@ -592,15 +603,14 @@ class PaymentController extends Controller
             (float) $amounts['paid_amount']
         );
         $hasPendingDetails = $payment->details()->where('status', 'menunggu')->exists();
-        $hasRejectedDetails = $payment->details()->where('status', 'ditolak')->exists();
 
-        if ((float) $amounts['paid_amount'] <= 0 && ! $hasPendingDetails && $hasRejectedDetails) {
-            $paymentStatus = 'ditolak';
+        if ($hasPendingDetails) {
+            $paymentStatus = 'menunggu';
         }
 
         $payment->update(array_merge($amounts, [
             'payment_status' => $paymentStatus,
-            'paid_at' => in_array($paymentStatus, ['lunas', 'sedang_digunakan'], true) ? now() : null,
+            'paid_at' => $paymentStatus === 'lunas' ? now() : null,
         ]));
 
         $booking = $this->bookingPaymentStatusService->syncBooking($payment->booking->fresh(['payment']));
@@ -626,7 +636,7 @@ class PaymentController extends Controller
 
     private function ensureBookingCanBePaid(Booking $booking): void
     {
-        if (in_array($booking->status, ['cancelled', 'completed'], true)) {
+        if (in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
             throw ValidationException::withMessages([
                 'booking' => ['Booking tidak bisa dibayar.'],
             ]);
@@ -675,18 +685,6 @@ class PaymentController extends Controller
             return;
         }
 
-        if ($paymentStatus === 'ditolak') {
-            $latestPendingDetail->update([
-                'status' => 'ditolak',
-                'verified_amount' => 0,
-                'notes' => $request->notes ?? $latestPendingDetail->notes,
-                'verified_by' => $request->user()->id,
-                'verified_at' => now(),
-            ]);
-
-            return;
-        }
-
         $acceptedAmountExceptLatest = (float) $payment->details()
             ->where('status', 'diterima')
             ->where('id', '!=', $latestPendingDetail->id)
@@ -718,5 +716,39 @@ class PaymentController extends Controller
         }
 
         return 'Pembayaran kurang Rp '.number_format((float) $payment->remaining_amount, 0, ',', '.');
+    }
+
+    private function buildWhatsappUrl(Payment $payment): ?string
+    {
+        $payment->loadMissing('booking.court');
+
+        if (! $payment->booking || (float) $payment->remaining_amount <= 0) {
+            return null;
+        }
+
+        $phone = preg_replace('/\D+/', '', (string) $payment->booking->phone);
+
+        if ($phone === '') {
+            return null;
+        }
+
+        if (str_starts_with($phone, '0')) {
+            $phone = '62'.substr($phone, 1);
+        } elseif (! str_starts_with($phone, '62')) {
+            $phone = '62'.$phone;
+        }
+
+        $message = sprintf(
+            "Halo %s, pembayaran booking #%s untuk %s tanggal %s jam %s-%s masih kurang Rp %s. Mohon lakukan pembayaran sisa agar booking tetap aktif. Terima kasih.",
+            $payment->booking->customer_name,
+            $payment->booking->id,
+            $payment->booking->court?->name ?? 'lapangan',
+            Carbon::parse($payment->booking->booking_date)->format('d-m-Y'),
+            Carbon::parse($payment->booking->start_time)->format('H:i'),
+            Carbon::parse($payment->booking->end_time)->format('H:i'),
+            number_format((float) $payment->remaining_amount, 0, ',', '.')
+        );
+
+        return 'https://wa.me/'.$phone.'?text='.rawurlencode($message);
     }
 }

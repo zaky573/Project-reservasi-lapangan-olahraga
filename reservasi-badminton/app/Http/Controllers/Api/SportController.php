@@ -15,6 +15,7 @@ class SportController extends Controller
             return [
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
+                'code' => $sport->code,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ];
@@ -32,10 +33,11 @@ class SportController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:sports,name',
+            'code' => 'required|string|max:10|alpha_num|unique:sports,code',
         ]);
 
-        // biar konsisten
         $validated['name'] = strtolower($validated['name']);
+        $validated['code'] = strtoupper($validated['code']);
 
         $sport = Sport::create($validated);
 
@@ -45,6 +47,7 @@ class SportController extends Controller
             'data' => [
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
+                'code' => $sport->code,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],
@@ -64,8 +67,12 @@ class SportController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|in:badminton,futsal|unique:sports,name,'.$id,
+            'name' => 'required|string|unique:sports,name,'.$id,
+            'code' => 'required|string|max:10|alpha_num|unique:sports,code,'.$id,
         ]);
+
+        $validated['name'] = strtolower($validated['name']);
+        $validated['code'] = strtoupper($validated['code']);
 
         $sport->update($validated);
 
@@ -75,6 +82,7 @@ class SportController extends Controller
             'data' => [
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
+                'code' => $sport->code,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],

@@ -21,14 +21,14 @@ export function BookingsManagementPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'confirmed':
-        return <Badge variant="success">Confirmed</Badge>;
-      case 'pending':
-        return <Badge variant="warning">Pending</Badge>;
-      case 'completed':
-        return <Badge variant="info">Completed</Badge>;
-      case 'cancelled':
-        return <Badge variant="danger">Cancelled</Badge>;
+      case 'dibooking':
+        return <Badge variant="warning">Dibooking</Badge>;
+      case 'sedang_digunakan':
+        return <Badge variant="info">Sedang Digunakan</Badge>;
+      case 'selesai':
+        return <Badge variant="success">Selesai</Badge>;
+      case 'dibatalkan':
+        return <Badge variant="danger">Dibatalkan</Badge>;
       default:
         return null;
     }
@@ -60,10 +60,10 @@ export function BookingsManagementPage() {
               className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="all">Semua Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="dibooking">Dibooking</option>
+              <option value="sedang_digunakan">Sedang Digunakan</option>
+              <option value="selesai">Selesai</option>
+              <option value="dibatalkan">Dibatalkan</option>
             </select>
           </div>
         </CardHeader>

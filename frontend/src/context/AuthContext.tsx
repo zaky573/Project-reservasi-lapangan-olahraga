@@ -1,23 +1,42 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, mockUsers, mockBookings, mockPayments, mockSports, mockCourts, Booking, Payment, Sport, Court } from '../data/mockData';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import type { Booking, Court, Payment, PaymentMethod, Sport, TimeSlot, User } from '../data/mockData';
+import { apiClient, ApiError } from '../lib/api';
+import {
+  mapBooking,
+  mapCourt,
+  mapPayment,
+  mapPaymentFromBooking,
+  mapSport,
+  mapTimeSlot,
+  mapUser,
+  toBackendPaymentStatus,
+  uniqueById,
+} from '../lib/adapters';
 
-interface PasswordResetSession {
-  email: string;
-  otp: string;
-  expires_at: string;
-  verified: boolean;
-}
+type ApiResponse<T> = {
+  status: boolean;
+  message: string;
+  data: T;
+  token?: string;
+};
 
-interface RegisterOtpSession {
-  email: string;
-  otp: string;
-  expires_at: string;
-  verified: boolean;
-}
+type BookingPaymentPayload = {
+  court_id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  customer_name: string;
+  phone: string;
+  payment_method: PaymentMethod;
+  amount: number;
+  proof_file?: File | null;
+  notes?: string;
+};
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   register: (name: string, email: string, phone: string, password: string) => Promise<boolean>;
@@ -26,6 +45,16 @@ interface AuthContextType {
   sendPasswordResetOtp: (email: string) => Promise<{ success: boolean; message: string; otp?: string }>;
   verifyPasswordResetOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  refreshData: () => Promise<void>;
+  fetchSchedule: (courtId: string, date: string) => Promise<TimeSlot[]>;
+  createBookingWithPayment: (payload: BookingPaymentPayload) => Promise<{ booking: Booking; payment: Payment }>;
+  submitPaymentDetail: (
+    bookingId: string,
+    paymentMethod: PaymentMethod,
+    amount: number,
+    proofFile?: File | null,
+    notes?: string
+  ) => Promise<Payment>;
   users: User[];
   bookings: Booking[];
   payments: Payment[];
@@ -47,284 +76,505 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'currentUser';
+
+function readSavedUser() {
+  const savedUser = localStorage.getItem(USER_KEY);
+  if (!savedUser) return null;
+
+  try {
+    return JSON.parse(savedUser) as User;
+  } catch {
+    localStorage.removeItem(USER_KEY);
+    return null;
+  }
+}
+
+function apiMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) return error.message;
+  return fallback;
+}
+
+function replaceById<T extends { id: string }>(items: T[], item: T) {
+  const exists = items.some((currentItem) => currentItem.id === item.id);
+  return exists
+    ? items.map((currentItem) => (currentItem.id === item.id ? item : currentItem))
+    : [item, ...items];
+}
+
+function extractBookingUsers(bookings: any[], payments: any[]) {
+  const bookingUsers = bookings
+    .map((booking) => booking?.user)
+    .filter(Boolean)
+    .map(mapUser);
+  const paymentUsers = payments
+    .map((payment) => payment?.booking?.user)
+    .filter(Boolean)
+    .map(mapUser);
+
+  return uniqueById([...bookingUsers, ...paymentUsers]);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
-  const [payments, setPayments] = useState<Payment[]>(mockPayments);
-  const [sports, setSports] = useState<Sport[]>(mockSports);
-  const [courts, setCourts] = useState<Court[]>(mockCourts);
-  const [passwordResetSessions, setPasswordResetSessions] = useState<PasswordResetSession[]>([]);
-  const [registerOtpSessions, setRegisterOtpSessions] = useState<RegisterOtpSession[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => readSavedUser());
+  const [users, setUsers] = useState<User[]>(() => {
+    const savedUser = readSavedUser();
+    return savedUser ? [savedUser] : [];
+  });
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [passwordResetOtp, setPasswordResetOtp] = useState<{ email: string; otp: string } | null>(null);
+
+  const persistAuth = (user: User, token?: string) => {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    setCurrentUser(user);
+    setUsers((currentUsers) => uniqueById([user, ...currentUsers]));
+  };
+
+  const clearAuth = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    setCurrentUser(null);
+    setUsers([]);
+    setBookings([]);
+    setPayments([]);
+  };
+
+  const loadPublicData = async () => {
+    const [sportsResponse, courtsResponse] = await Promise.all([
+      apiClient.get<ApiResponse<any[]>>('/sports'),
+      apiClient.get<ApiResponse<any[]>>('/courts'),
+    ]);
+
+    setSports(sportsResponse.data.map(mapSport));
+    setCourts(courtsResponse.data.map(mapCourt));
+  };
+
+  const loadUserData = async () => {
+    const response = await apiClient.get<ApiResponse<any[]>>('/my-bookings');
+    const apiBookings = response.data;
+    const mappedBookings = apiBookings.map(mapBooking);
+    const mappedPayments = apiBookings.map(mapPaymentFromBooking).filter(Boolean) as Payment[];
+
+    setBookings(mappedBookings);
+    setPayments(mappedPayments);
+  };
+
+  const loadAdminData = async () => {
+    const [bookingsResponse, paymentsResponse] = await Promise.all([
+      apiClient.get<ApiResponse<any[]>>('/bookings'),
+      apiClient.get<ApiResponse<any[]>>('/payments'),
+    ]);
+
+    const apiBookings = bookingsResponse.data;
+    const apiPayments = paymentsResponse.data;
+    const mappedBookings = apiBookings.map(mapBooking);
+    const mappedPayments = apiPayments.map(mapPayment);
+    const relatedUsers = extractBookingUsers(apiBookings, apiPayments);
+
+    setBookings(mappedBookings);
+    setPayments(mappedPayments);
+    setUsers((currentUsers) => uniqueById([...(currentUser ? [currentUser] : []), ...currentUsers, ...relatedUsers]));
+  };
+
+  const loadProtectedData = async (user = currentUser) => {
+    if (!user) return;
+
+    if (user.role === 'user') {
+      await loadUserData();
+      return;
+    }
+
+    await loadAdminData();
+  };
+
+  const refreshData = async () => {
+    await loadPublicData();
+    await loadProtectedData();
+  };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
+    let mounted = true;
+
+    const boot = async () => {
+      try {
+        await loadPublicData();
+
+        if (localStorage.getItem(TOKEN_KEY)) {
+          const response = await apiClient.get<ApiResponse<any>>('/me');
+          const user = mapUser(response.data);
+          persistAuth(user);
+          await loadProtectedData(user);
+        }
+      } catch (error) {
+        if (localStorage.getItem(TOKEN_KEY)) {
+          clearAuth();
+        }
+        console.warn(apiMessage(error, 'Gagal memuat data awal'));
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    boot();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem('currentUser', JSON.stringify(user));
+    try {
+      const response = await apiClient.post<ApiResponse<{ user: any; token: string; redirect_to?: string }>>('/login', {
+        email,
+        password,
+      });
+      const token = response.token || response.data.token;
+      const user = mapUser(response.data.user);
+
+      persistAuth(user, token);
+      await loadProtectedData(user);
       return true;
+    } catch (error) {
+      console.warn(apiMessage(error, 'Login gagal'));
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('currentUser');
+    apiClient.post('/logout').catch(() => undefined);
+    clearAuth();
   };
 
   const register = async (name: string, email: string, phone: string, password: string): Promise<boolean> => {
-    const existingUser = users.find(u => u.email === email);
-    const registerSession = registerOtpSessions.find(
-      (session) => session.email.toLowerCase() === email.toLowerCase()
-    );
+    try {
+      await apiClient.post('/register', {
+        name,
+        email,
+        phone,
+        password,
+        password_confirmation: password,
+      });
 
-    if (existingUser) {
+      return true;
+    } catch (error) {
+      console.warn(apiMessage(error, 'Registrasi gagal'));
       return false;
     }
-
-    if (!registerSession || !registerSession.verified) {
-      return false;
-    }
-
-    const newUser: User = {
-      id: String(users.length + 1),
-      name,
-      email,
-      phone,
-      password,
-      role: 'user',
-    };
-
-    setUsers([...users, newUser]);
-    setRegisterOtpSessions((currentSessions) =>
-      currentSessions.filter((session) => session.email.toLowerCase() !== email.toLowerCase())
-    );
-    return true;
   };
 
   const sendRegisterOtp = async (email: string) => {
-    const existingUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      const response = await apiClient.post<ApiResponse<{ email: string; expires_at: string }>>('/register/resend-otp', {
+        email,
+      });
 
-    if (existingUser) {
+      return {
+        success: true,
+        message: response.message || 'Kode OTP baru berhasil dikirim.',
+      };
+    } catch (error) {
       return {
         success: false,
-        message: 'Email sudah terdaftar',
+        message: apiMessage(error, 'Gagal mengirim ulang OTP. Silakan daftar ulang.'),
       };
     }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    setRegisterOtpSessions((currentSessions) => [
-      ...currentSessions.filter((session) => session.email.toLowerCase() !== email.toLowerCase()),
-      {
-        email,
-        otp,
-        expires_at: expiresAt,
-        verified: false,
-      },
-    ]);
-
-    return {
-      success: true,
-      message: 'OTP registrasi berhasil dikirim.',
-      otp,
-    };
   };
 
   const verifyRegisterOtp = async (email: string, otp: string) => {
-    const session = registerOtpSessions.find(
-      (item) => item.email.toLowerCase() === email.toLowerCase()
-    );
+    try {
+      const response = await apiClient.post<ApiResponse<{ user: any; token: string }>>('/register/verify-otp', {
+        email,
+        otp,
+      });
+      const user = mapUser(response.data.user);
 
-    if (!session) {
+      persistAuth(user, response.data.token);
+      await loadProtectedData(user);
+
+      return {
+        success: true,
+        message: response.message || 'Registrasi berhasil diverifikasi.',
+      };
+    } catch (error) {
       return {
         success: false,
-        message: 'OTP registrasi belum dikirim untuk email ini',
+        message: apiMessage(error, 'Kode OTP tidak valid.'),
       };
     }
-
-    if (new Date(session.expires_at).getTime() < Date.now()) {
-      return {
-        success: false,
-        message: 'OTP registrasi sudah kadaluarsa. Silakan kirim ulang OTP.',
-      };
-    }
-
-    if (session.otp !== otp) {
-      return {
-        success: false,
-        message: 'Kode OTP tidak valid',
-      };
-    }
-
-    setRegisterOtpSessions((currentSessions) =>
-      currentSessions.map((item) =>
-        item.email.toLowerCase() === email.toLowerCase()
-          ? { ...item, verified: true }
-          : item
-      )
-    );
-
-    return {
-      success: true,
-      message: 'OTP registrasi berhasil diverifikasi',
-    };
   };
 
   const sendPasswordResetOtp = async (email: string) => {
-    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    try {
+      const response = await apiClient.post<ApiResponse<{ email: string; expires_at: string }>>(
+        '/forgot-password/request-otp',
+        { email }
+      );
 
-    if (!user) {
+      return {
+        success: true,
+        message: response.message || 'OTP reset password berhasil dikirim.',
+      };
+    } catch (error) {
       return {
         success: false,
-        message: 'Email tidak ditemukan',
+        message: apiMessage(error, 'Gagal mengirim OTP reset password.'),
       };
     }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-
-    setPasswordResetSessions((currentSessions) => [
-      ...currentSessions.filter((session) => session.email.toLowerCase() !== email.toLowerCase()),
-      {
-        email,
-        otp,
-        expires_at: expiresAt,
-        verified: false,
-      },
-    ]);
-
-    return {
-      success: true,
-      message: 'OTP berhasil dikirim. Silakan cek kode OTP Anda.',
-      otp,
-    };
   };
 
   const verifyPasswordResetOtp = async (email: string, otp: string) => {
-    const session = passwordResetSessions.find(
-      (item) => item.email.toLowerCase() === email.toLowerCase()
-    );
-
-    if (!session) {
+    if (!/^\d{6}$/.test(otp)) {
       return {
         success: false,
-        message: 'OTP belum dikirim untuk email ini',
+        message: 'Kode OTP harus 6 digit.',
       };
     }
 
-    if (new Date(session.expires_at).getTime() < Date.now()) {
-      return {
-        success: false,
-        message: 'OTP sudah kadaluarsa. Silakan kirim ulang OTP.',
-      };
-    }
-
-    if (session.otp !== otp) {
-      return {
-        success: false,
-        message: 'Kode OTP tidak valid',
-      };
-    }
-
-    setPasswordResetSessions((currentSessions) =>
-      currentSessions.map((item) =>
-        item.email.toLowerCase() === email.toLowerCase()
-          ? { ...item, verified: true }
-          : item
-      )
-    );
+    setPasswordResetOtp({ email, otp });
 
     return {
       success: true,
-      message: 'OTP berhasil diverifikasi',
+      message: 'OTP siap dipakai untuk membuat password baru.',
     };
   };
 
   const resetPassword = async (email: string, newPassword: string) => {
-    const session = passwordResetSessions.find(
-      (item) => item.email.toLowerCase() === email.toLowerCase()
-    );
-
-    if (!session || !session.verified) {
+    if (!passwordResetOtp || passwordResetOtp.email.toLowerCase() !== email.toLowerCase()) {
       return {
         success: false,
-        message: 'Verifikasi OTP diperlukan sebelum mengganti password',
+        message: 'Verifikasi OTP diperlukan sebelum mengganti password.',
       };
     }
 
-    setUsers((currentUsers) =>
-      currentUsers.map((user) =>
-        user.email.toLowerCase() === email.toLowerCase()
-          ? { ...user, password: newPassword }
-          : user
-      )
-    );
+    try {
+      const response = await apiClient.post<ApiResponse<null>>('/forgot-password/verify-otp', {
+        email,
+        otp: passwordResetOtp.otp,
+        password: newPassword,
+        password_confirmation: newPassword,
+      });
 
-    setPasswordResetSessions((currentSessions) =>
-      currentSessions.filter((item) => item.email.toLowerCase() !== email.toLowerCase())
-    );
+      setPasswordResetOtp(null);
 
-    return {
-      success: true,
-      message: 'Password berhasil diperbarui',
-    };
+      return {
+        success: true,
+        message: response.message || 'Password berhasil direset.',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: apiMessage(error, 'Gagal mereset password.'),
+      };
+    }
   };
 
   const addBooking = (booking: Booking) => {
-    setBookings([...bookings, booking]);
+    setBookings((currentBookings) => replaceById(currentBookings, booking));
   };
 
   const addPayment = (payment: Payment) => {
-    setPayments([...payments, payment]);
+    setPayments((currentPayments) => replaceById(currentPayments, payment));
   };
 
   const updatePayment = (paymentId: string, updates: Partial<Payment>) => {
-    setPayments(payments.map(p => p.id === paymentId ? { ...p, ...updates } : p));
+    setPayments((currentPayments) =>
+      currentPayments.map((payment) => (payment.id === paymentId ? { ...payment, ...updates } : payment))
+    );
+
+    apiClient
+      .put<ApiResponse<any>>(`/payments/${paymentId}/verify`, {
+        payment_status: toBackendPaymentStatus(updates.status),
+        paid_amount: updates.amount,
+        notes: updates.admin_note,
+      })
+      .then((response) => {
+        const payment = mapPayment(response.data);
+        setPayments((currentPayments) => replaceById(currentPayments, payment));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal memperbarui pembayaran')));
   };
 
   const updateBooking = (bookingId: string, updates: Partial<Booking>) => {
-    setBookings(bookings.map(b => b.id === bookingId ? { ...b, ...updates } : b));
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) => (booking.id === bookingId ? { ...booking, ...updates } : booking))
+    );
   };
 
   const addSport = (sport: Sport) => {
-    setSports([...sports, sport]);
+    apiClient
+      .post<ApiResponse<any>>('/sports', {
+        name: sport.name.toLowerCase(),
+        code: sport.code,
+      })
+      .then((response) => {
+        const mappedSport = mapSport(response.data);
+        setSports((currentSports) => replaceById(currentSports, mappedSport));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal menambahkan sport')));
   };
 
   const updateSport = (sportId: string, updates: Partial<Sport>) => {
-    setSports(sports.map(s => s.id === sportId ? { ...s, ...updates } : s));
+    setSports((currentSports) =>
+      currentSports.map((sport) => (sport.id === sportId ? { ...sport, ...updates } : sport))
+    );
+
+    apiClient
+      .put<ApiResponse<any>>(`/sports/${sportId}`, {
+        name: updates.name?.toLowerCase(),
+        code: updates.code,
+      })
+      .then((response) => {
+        const sport = mapSport(response.data);
+        setSports((currentSports) => replaceById(currentSports, sport));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal memperbarui sport')));
   };
 
   const deleteSport = (sportId: string) => {
-    setSports(sports.filter(s => s.id !== sportId));
+    setSports((currentSports) => currentSports.filter((sport) => sport.id !== sportId));
+    apiClient.delete(`/sports/${sportId}`).catch((error) => console.warn(apiMessage(error, 'Gagal menghapus sport')));
   };
 
   const addCourt = (court: Court) => {
-    setCourts([...courts, court]);
+    apiClient
+      .post<ApiResponse<any>>('/courts', {
+        sport_id: court.sport_id,
+        name: court.name,
+        code: court.code || undefined,
+        price_per_hour: court.price_per_hour,
+        status: court.status,
+        description: court.description,
+      })
+      .then((response) => {
+        const mappedCourt = mapCourt(response.data);
+        setCourts((currentCourts) => replaceById(currentCourts, mappedCourt));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal menambahkan lapangan')));
   };
 
   const updateCourt = (courtId: string, updates: Partial<Court>) => {
-    setCourts(courts.map(c => c.id === courtId ? { ...c, ...updates } : c));
+    const previousCourt = courts.find((court) => court.id === courtId);
+    const payload = { ...previousCourt, ...updates };
+
+    setCourts((currentCourts) =>
+      currentCourts.map((court) => (court.id === courtId ? { ...court, ...updates } : court))
+    );
+
+    apiClient
+      .put<ApiResponse<any>>(`/courts/${courtId}`, {
+        sport_id: payload.sport_id,
+        name: payload.name,
+        code: payload.code || undefined,
+        price_per_hour: payload.price_per_hour,
+        status: payload.status,
+        description: payload.description,
+      })
+      .then((response) => {
+        const court = mapCourt(response.data);
+        setCourts((currentCourts) => replaceById(currentCourts, court));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal memperbarui lapangan')));
   };
 
   const deleteCourt = (courtId: string) => {
-    setCourts(courts.filter(c => c.id !== courtId));
+    setCourts((currentCourts) => currentCourts.filter((court) => court.id !== courtId));
+    apiClient.delete(`/courts/${courtId}`).catch((error) => console.warn(apiMessage(error, 'Gagal menghapus lapangan')));
   };
 
   const addUser = (user: User) => {
-    setUsers([...users, user]);
+    apiClient
+      .post<ApiResponse<any>>('/admins', {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        password: user.password,
+      })
+      .then((response) => {
+        const admin = mapUser(response.data);
+        setUsers((currentUsers) => uniqueById([admin, ...currentUsers]));
+      })
+      .catch((error) => console.warn(apiMessage(error, 'Gagal menambahkan admin')));
   };
 
   const deleteUser = (userId: string) => {
-    setUsers(users.filter(u => u.id !== userId));
+    setUsers((currentUsers) => currentUsers.filter((user) => user.id !== userId));
+  };
+
+  const fetchSchedule = async (courtId: string, date: string) => {
+    const response = await apiClient.get<ApiResponse<{ slots: any[] }>>('/schedules', {
+      court_id: courtId,
+      date,
+    });
+
+    return response.data.slots.map((slot) => mapTimeSlot(slot, courtId, date));
+  };
+
+  const submitPaymentDetail = async (
+    bookingId: string,
+    paymentMethod: PaymentMethod,
+    amount: number,
+    proofFile?: File | null,
+    notes?: string
+  ) => {
+    const formData = new FormData();
+    formData.append('payment_method', paymentMethod);
+    formData.append('amount', String(amount));
+
+    if (proofFile) {
+      formData.append('proof_file', proofFile);
+    }
+
+    if (notes) {
+      formData.append('notes', notes);
+    }
+
+    const response = await apiClient.postForm<ApiResponse<any>>(`/payments/${bookingId}/details`, formData);
+    const payment = mapPayment(response.data);
+
+    setPayments((currentPayments) => replaceById(currentPayments, payment));
+    await loadProtectedData();
+
+    return payment;
+  };
+
+  const createBookingWithPayment = async (payload: BookingPaymentPayload) => {
+    const bookingResponse = await apiClient.post<ApiResponse<any>>('/bookings', {
+      court_id: payload.court_id,
+      booking_date: payload.booking_date,
+      start_time: payload.start_time,
+      end_time: payload.end_time,
+      customer_name: payload.customer_name,
+      phone: payload.phone,
+      notes: payload.notes,
+    });
+    const booking = mapBooking(bookingResponse.data);
+
+    await apiClient.post<ApiResponse<any>>(`/payments/${booking.id}`, {
+      payment_method: payload.payment_method,
+    });
+
+    const payment = await submitPaymentDetail(
+      booking.id,
+      payload.payment_method,
+      payload.amount,
+      payload.proof_file,
+      payload.notes
+    );
+
+    setBookings((currentBookings) => replaceById(currentBookings, booking));
+
+    return { booking, payment };
   };
 
   return (
@@ -332,6 +582,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         currentUser,
         isAuthenticated: !!currentUser,
+        isLoading,
         login,
         logout,
         register,
@@ -340,6 +591,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sendPasswordResetOtp,
         verifyPasswordResetOtp,
         resetPassword,
+        refreshData,
+        fetchSchedule,
+        createBookingWithPayment,
+        submitPaymentDetail,
         users,
         bookings,
         payments,

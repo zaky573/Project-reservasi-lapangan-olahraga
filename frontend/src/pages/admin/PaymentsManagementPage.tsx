@@ -6,12 +6,14 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { formatCurrency, formatDateTime } from '../../lib/utils';
-import { Search, Eye, CheckCircle, Clock, Wallet } from 'lucide-react';
+import { Search, Eye, CheckCircle, Clock, Wallet, MessageCircle } from 'lucide-react';
 
 type PaymentWithRelations = {
   id: string;
   booking_id: string;
   amount: number;
+  paid_amount?: number;
+  total_amount?: number;
   method: 'cash' | 'transfer';
   status: string;
   proof_url?: string;
@@ -45,7 +47,10 @@ export function PaymentsManagementPage() {
       const booking = bookings.find((item) => item.id === payment.booking_id);
       const court = booking ? courts.find((item) => item.id === booking.court_id) : null;
       const user = booking ? users.find((item) => item.id === booking.user_id) : null;
-      const remainingAmount = Math.max((booking?.total_price || 0) - payment.amount, 0);
+      const acceptedAmount = payment.status === 'menunggu'
+        ? payment.paid_amount || 0
+        : payment.amount;
+      const remainingAmount = Math.max((booking?.total_price || payment.total_amount || 0) - acceptedAmount, 0);
 
       return {
         ...payment,
@@ -69,14 +74,14 @@ export function PaymentsManagementPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
-        return <Badge variant="success">Approve</Badge>;
-      case 'pending_verification':
-        return <Badge variant="warning">Menunggu Verifikasi</Badge>;
-      case 'pending':
-        return <Badge variant="info">Pending</Badge>;
-      case 'rejected':
-        return <Badge variant="danger">Ditolak</Badge>;
+      case 'lunas':
+        return <Badge variant="success">Lunas</Badge>;
+      case 'menunggu':
+        return <Badge variant="warning">Menunggu</Badge>;
+      case 'pembayaran_awal':
+        return <Badge variant="info">Pembayaran Awal</Badge>;
+      case 'verifikasi_pembayaran_sisa':
+        return <Badge variant="warning">Verifikasi Pembayaran Sisa</Badge>;
       default:
         return null;
     }
@@ -85,23 +90,71 @@ export function PaymentsManagementPage() {
   const getPaymentNote = (payment: PaymentWithRelations) => {
     if (payment.admin_note) return payment.admin_note;
 
-    if (payment.status === 'paid') {
+    if (payment.status === 'lunas') {
       return `Pembayaran sudah memenuhi syarat. Uang masuk tercatat ${formatCurrency(payment.amount)}.`;
     }
 
-    if (payment.status === 'pending') {
+    if (payment.status === 'pembayaran_awal') {
+      return `Pembayaran awal sudah diterima. Sisa pembayaran ${formatCurrency(payment.remainingAmount)} perlu dilunasi sebelum jam selesai main.`;
+    }
+
+    if (payment.status === 'verifikasi_pembayaran_sisa') {
       if (payment.settlement_method === 'cash_at_venue') {
         return `Customer memilih membayar sisa ${formatCurrency(payment.remainingAmount)} secara cash saat datang ke lapangan.`;
       }
 
-      return `Admin mencatat uang masuk ${formatCurrency(payment.amount)}. Sisa pembayaran ${formatCurrency(payment.remainingAmount)} dapat ditransfer ulang atau dibayar langsung saat datang.`;
+      return `Pembayaran masih kurang ${formatCurrency(payment.remainingAmount)}. Hubungi customer untuk pembayaran sisa.`;
     }
 
-    if (payment.status === 'pending_verification' && payment.pending_amount) {
-      return `Customer mengirim bukti transfer sisa ${formatCurrency(payment.pending_amount)}. Silakan cek bukti tambahan lalu approve jika uang sudah masuk.`;
+    if (payment.status === 'menunggu' && payment.pending_amount) {
+      return `Customer mengirim bukti pembayaran ${formatCurrency(payment.pending_amount)}. Silakan cek bukti lalu simpan status pembayaran.`;
     }
 
     return 'Bukti pembayaran masih menunggu pengecekan admin.';
+  };
+
+  const getPartialStatus = (payment: PaymentWithRelations, paidAmount: number) => {
+    if (payment.method === 'cash') {
+      const dpAmount = Math.round((payment.booking?.total_price || payment.amount) * 0.25);
+      return paidAmount <= dpAmount ? 'pembayaran_awal' : 'verifikasi_pembayaran_sisa';
+    }
+
+    return 'verifikasi_pembayaran_sisa';
+  };
+
+  const buildWhatsAppUrl = (payment: PaymentWithRelations) => {
+    const rawPhone = payment.booking?.customer_phone || payment.user?.phone || '';
+    let phone = rawPhone.replace(/\D/g, '');
+
+    if (!phone) return '';
+
+    if (phone.startsWith('0')) {
+      phone = `62${phone.slice(1)}`;
+    } else if (!phone.startsWith('62')) {
+      phone = `62${phone}`;
+    }
+
+    const message = [
+      `Halo ${payment.booking?.customer_name || 'Customer'},`,
+      `pembayaran booking #${payment.booking_id} masih kurang ${formatCurrency(payment.remainingAmount)}.`,
+      `Mohon lakukan pembayaran sisa agar booking tetap aktif.`,
+      `Terima kasih.`,
+    ].join(' ');
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  };
+
+  const canSendWhatsApp = (payment: PaymentWithRelations) => {
+    return payment.remainingAmount > 0
+      && ['pembayaran_awal', 'verifikasi_pembayaran_sisa'].includes(payment.status)
+      && !!buildWhatsAppUrl(payment);
+  };
+
+  const openWhatsApp = (payment: PaymentWithRelations) => {
+    const url = buildWhatsAppUrl(payment);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const openPaymentModal = (payment: PaymentWithRelations) => {
@@ -115,20 +168,22 @@ export function PaymentsManagementPage() {
 
   const handleApprove = (payment: PaymentWithRelations) => {
     const totalPrice = payment.booking?.total_price || payment.amount;
+    const acceptedAmount = payment.status === 'menunggu' ? payment.paid_amount || 0 : payment.amount;
     const approvedAmount = payment.pending_amount
-      ? Math.min(payment.amount + payment.pending_amount, totalPrice)
+      ? Math.min(acceptedAmount + payment.pending_amount, totalPrice)
       : payment.method === 'transfer'
         ? totalPrice
         : payment.amount;
     const remainingAmount = Math.max(totalPrice - approvedAmount, 0);
-    const nextStatus = remainingAmount === 0 ? 'paid' : 'pending';
+    const nextStatus = remainingAmount === 0 ? 'lunas' : getPartialStatus(payment, approvedAmount);
     const adminNote =
-      nextStatus === 'paid'
+      nextStatus === 'lunas'
         ? `Pembayaran sudah memenuhi syarat. Uang masuk tercatat ${formatCurrency(approvedAmount)}.`
         : `Pembayaran awal sudah memenuhi syarat. Sisa pembayaran ${formatCurrency(remainingAmount)} dapat dibayar langsung saat datang.`;
 
     updatePayment(payment.id, {
       amount: approvedAmount,
+      paid_amount: approvedAmount,
       status: nextStatus,
       admin_note: adminNote,
       settlement_method: undefined,
@@ -143,6 +198,7 @@ export function PaymentsManagementPage() {
       setSelectedPayment({
         ...payment,
         amount: approvedAmount,
+        paid_amount: approvedAmount,
         remainingAmount,
         status: nextStatus,
         admin_note: adminNote,
@@ -170,7 +226,7 @@ export function PaymentsManagementPage() {
     }
 
     if (parsedAmount >= totalPrice) {
-      setReceivedAmountError('Nominal sudah memenuhi tagihan. Gunakan tombol Approve.');
+      setReceivedAmountError('Nominal sudah memenuhi tagihan. Gunakan tombol Lunas.');
       return;
     }
 
@@ -179,7 +235,8 @@ export function PaymentsManagementPage() {
 
     updatePayment(selectedPayment.id, {
       amount: parsedAmount,
-      status: 'pending',
+      paid_amount: parsedAmount,
+      status: getPartialStatus(selectedPayment, parsedAmount),
       admin_note: adminNote,
       settlement_method: undefined,
       pending_amount: undefined,
@@ -192,8 +249,9 @@ export function PaymentsManagementPage() {
     setSelectedPayment({
       ...selectedPayment,
       amount: parsedAmount,
+      paid_amount: parsedAmount,
       remainingAmount,
-      status: 'pending',
+      status: getPartialStatus(selectedPayment, parsedAmount),
       admin_note: adminNote,
       settlement_method: undefined,
       pending_amount: undefined,
@@ -222,14 +280,15 @@ export function PaymentsManagementPage() {
 
     const newPaidAmount = selectedPayment.amount + parsedAmount;
     const newRemainingAmount = Math.max((selectedPayment.booking?.total_price || 0) - newPaidAmount, 0);
-    const nextStatus = newRemainingAmount === 0 ? 'paid' : 'pending';
+    const nextStatus = newRemainingAmount === 0 ? 'lunas' : 'verifikasi_pembayaran_sisa';
     const adminNote =
-      nextStatus === 'paid'
+      nextStatus === 'lunas'
         ? `Pembayaran sudah memenuhi syarat. Uang masuk tercatat ${formatCurrency(newPaidAmount)}.`
         : `Admin mencatat uang masuk ${formatCurrency(newPaidAmount)}. Sisa pembayaran ${formatCurrency(newRemainingAmount)} dapat ditransfer ulang atau dibayar langsung saat datang.`;
 
     updatePayment(selectedPayment.id, {
       amount: newPaidAmount,
+      paid_amount: newPaidAmount,
       status: nextStatus,
       admin_note: adminNote,
       settlement_method: undefined,
@@ -243,6 +302,7 @@ export function PaymentsManagementPage() {
     setSelectedPayment({
       ...selectedPayment,
       amount: newPaidAmount,
+      paid_amount: newPaidAmount,
       remainingAmount: newRemainingAmount,
       status: nextStatus,
       admin_note: adminNote,
@@ -288,9 +348,10 @@ export function PaymentsManagementPage() {
               className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="all">Semua Status</option>
-              <option value="pending_verification">Menunggu Verifikasi</option>
-              <option value="pending">Pending</option>
-              <option value="paid">Approve</option>
+              <option value="menunggu">Menunggu</option>
+              <option value="pembayaran_awal">Pembayaran Awal</option>
+              <option value="verifikasi_pembayaran_sisa">Verifikasi Pembayaran Sisa</option>
+              <option value="lunas">Lunas</option>
             </select>
           </div>
         </CardHeader>
@@ -328,14 +389,26 @@ export function PaymentsManagementPage() {
                       {formatDateTime(payment.created_at)}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openPaymentModal(payment)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Aksi
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {canSendWhatsApp(payment) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openWhatsApp(payment)}
+                          >
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                            WA
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openPaymentModal(payment)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Aksi
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -383,7 +456,7 @@ export function PaymentsManagementPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedPayment.status === 'pending_verification' ? 'Nominal Diajukan' : 'Uang Masuk'}
+                  {selectedPayment.status === 'menunggu' ? 'Nominal Diajukan' : 'Uang Masuk'}
                 </p>
                 <p className="font-medium text-primary">{formatCurrency(selectedPayment.amount)}</p>
               </div>
@@ -432,11 +505,20 @@ export function PaymentsManagementPage() {
               </div>
             )}
 
-            {selectedPayment.status === 'pending_verification' && (
+            {canSendWhatsApp(selectedPayment) && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => openWhatsApp(selectedPayment)}>
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Chat WhatsApp Customer
+                </Button>
+              </div>
+            )}
+
+            {selectedPayment.status === 'menunggu' && (
               <div className="rounded-lg border border-warning/30 bg-warning/10 p-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <Clock className="w-5 h-5 text-warning" />
-                  <h3 className="font-semibold text-foreground">Konfirmasi Pending</h3>
+                  <h3 className="font-semibold text-foreground">Konfirmasi Pembayaran</h3>
                 </div>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
@@ -469,7 +551,7 @@ export function PaymentsManagementPage() {
               </div>
             )}
 
-            {selectedPayment.status === 'pending' && selectedPayment.remainingAmount > 0 && (
+            {['pembayaran_awal', 'verifikasi_pembayaran_sisa'].includes(selectedPayment.status) && selectedPayment.remainingAmount > 0 && (
               <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <Wallet className="w-5 h-5 text-primary" />
@@ -498,21 +580,21 @@ export function PaymentsManagementPage() {
               </div>
             )}
 
-            {selectedPayment.status === 'pending_verification' && (
+            {selectedPayment.status === 'menunggu' && (
               <div className="flex justify-end space-x-3 pt-4 border-t border-border">
                 <Button
                   variant="outline"
                   onClick={handleMarkPending}
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  Pending
+                  Simpan Pembayaran Kurang
                 </Button>
                 <Button
                   variant="accent"
                   onClick={() => handleApprove(selectedPayment)}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve
+                  Lunas
                 </Button>
               </div>
             )}

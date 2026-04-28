@@ -13,7 +13,7 @@ export function SportsManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSport, setEditingSport] = useState<Sport | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', icon: '' });
+  const [formData, setFormData] = useState({ name: '', code: '', description: '', icon: '' });
 
   const filteredSports = sports.filter((sport) =>
     sport.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -35,12 +35,12 @@ export function SportsManagementPage() {
 
     setIsModalOpen(false);
     setEditingSport(null);
-    setFormData({ name: '', description: '', icon: '' });
+    setFormData({ name: '', code: '', description: '', icon: '' });
   };
 
   const handleEdit = (sport: Sport) => {
     setEditingSport(sport);
-    setFormData({ name: sport.name, description: sport.description, icon: sport.icon });
+    setFormData({ name: sport.name, code: sport.code, description: sport.description, icon: sport.icon });
     setIsModalOpen(true);
   };
 
@@ -61,7 +61,7 @@ export function SportsManagementPage() {
           variant="primary"
           onClick={() => {
             setEditingSport(null);
-            setFormData({ name: '', description: '', icon: '' });
+            setFormData({ name: '', code: '', description: '', icon: '' });
             setIsModalOpen(true);
           }}
         >
@@ -91,6 +91,7 @@ export function SportsManagementPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Icon</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Kode</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nama</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Deskripsi</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Dibuat</th>
@@ -101,6 +102,7 @@ export function SportsManagementPage() {
                 {filteredSports.map((sport) => (
                   <tr key={sport.id} className="border-b border-border hover:bg-muted/50">
                     <td className="py-3 px-4 text-2xl">{sport.icon}</td>
+                    <td className="py-3 px-4 font-medium text-primary">{sport.code}</td>
                     <td className="py-3 px-4 font-medium text-foreground">{sport.name}</td>
                     <td className="py-3 px-4 text-muted-foreground">{sport.description}</td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(sport.created_at)}</td>
@@ -145,6 +147,13 @@ export function SportsManagementPage() {
             label="Nama Sport"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+          />
+          <Input
+            label="Kode Sport"
+            value={formData.code}
+            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) })}
+            placeholder="Contoh: BDM"
             required
           />
           <Input

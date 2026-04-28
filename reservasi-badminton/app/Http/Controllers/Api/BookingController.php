@@ -109,7 +109,7 @@ class BookingController extends Controller
         // Cek bentrok slot
         $conflict = Booking::where('court_id', $validated['court_id'])
             ->where('booking_date', $validated['booking_date'])
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['dibatalkan', 'cancelled'])
             ->where(function ($query) use ($validated) {
                 $query->where('start_time', '<', $validated['end_time'])
                     ->where('end_time', '>', $validated['start_time']);
@@ -326,50 +326,18 @@ class BookingController extends Controller
     // PUT /api/bookings/{id} (admin)
     public function update(Request $request, $id)
     {
-        $booking = Booking::with(['court.sport', 'user'])->find($id);
-
-        if (! $booking) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Booking tidak ditemukan',
-            ], 404);
-        }
-
-        $validated = $request->validate([
-            'status' => 'required|in:dibooking,in_use,completed,cancelled',
-
-        ]);
-
-        $booking->update([
-            'status' => $validated['status'],
-        ]);
-
-        $booking->load(['court.sport', 'user']);
-
         return response()->json([
-            'status' => true,
-            'message' => 'Status booking berhasil diupdate',
-            'data' => $this->formatBooking($booking),
-        ]);
+            'status' => false,
+            'message' => 'Status booking diubah otomatis oleh sistem pembayaran dan jadwal.',
+        ], 403);
     }
 
     // DELETE /api/bookings/{id} (admin)
     public function destroy($id)
     {
-        $booking = Booking::find($id);
-
-        if (! $booking) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Booking tidak ditemukan',
-            ], 404);
-        }
-
-        $booking->delete();
-
         return response()->json([
-            'status' => true,
-            'message' => 'Booking berhasil dihapus',
-        ]);
+            'status' => false,
+            'message' => 'Booking tidak dapat dihapus manual. Status booking diatur otomatis.',
+        ], 403);
     }
 }

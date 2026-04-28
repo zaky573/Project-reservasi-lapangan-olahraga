@@ -30,14 +30,14 @@ export function BookingSuccessPage() {
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
-        return <Badge variant="success">Approve</Badge>;
-      case 'pending_verification':
-        return <Badge variant="warning">Menunggu Verifikasi</Badge>;
-      case 'pending':
-        return <Badge variant="info">Pending</Badge>;
-      case 'rejected':
-        return <Badge variant="danger">Ditolak</Badge>;
+      case 'lunas':
+        return <Badge variant="success">Lunas</Badge>;
+      case 'menunggu':
+        return <Badge variant="warning">Menunggu</Badge>;
+      case 'pembayaran_awal':
+        return <Badge variant="info">Pembayaran Awal</Badge>;
+      case 'verifikasi_pembayaran_sisa':
+        return <Badge variant="warning">Verifikasi Pembayaran Sisa</Badge>;
       default:
         return null;
     }
@@ -54,8 +54,8 @@ export function BookingSuccessPage() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Booking Berhasil!</h1>
             <p className="text-muted-foreground mb-8">
               {payment.method === 'transfer'
-                ? 'Pembayaran Anda sedang diverifikasi. Cek status di halaman Riwayat Booking.'
-                : 'DP Anda sedang diverifikasi. Setelah itu, sisa pembayaran cash dibayar di tempat saat Anda tiba.'}
+                ? 'Pembayaran transfer 100% Anda sedang diverifikasi. Cek status di halaman Riwayat Booking.'
+                : 'DP 25% Anda sedang diverifikasi. Setelah itu, sisa pembayaran cash dibayar di tempat saat Anda tiba.'}
             </p>
 
             <div className="bg-muted/30 rounded-lg p-6 text-left mb-6">

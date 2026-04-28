@@ -37,7 +37,6 @@ class ReportController extends Controller
 
         $bookings = Booking::with(['court.sport', 'user', 'payment'])
             ->whereBetween('booking_date', [$startDate, $endDate])
-            ->whereIn('status', ['completed', 'cancelled'])
             ->get();
 
         $rows = $bookings->map(function ($booking, $index) {
@@ -62,15 +61,15 @@ class ReportController extends Controller
         $totalPaidAmount = (float) $rows->sum('paid_amount');
         $totalRemainingAmount = (float) $rows->sum('remaining_amount');
 
-        $totalRevenue = $bookings
-            ->where('status', 'completed')
-            ->sum(function ($booking) {
-                return (float) ($booking->payment?->paid_amount ?? 0);
-            });
+        $totalRevenue = $bookings->sum(function ($booking) {
+            return (float) ($booking->payment?->paid_amount ?? 0);
+        });
 
         $statusSummary = [
-            'completed' => $bookings->where('status', 'completed')->count(),
-            'cancelled' => $bookings->where('status', 'cancelled')->count(),
+            'dibooking' => $bookings->where('status', 'dibooking')->count(),
+            'sedang_digunakan' => $bookings->where('status', 'sedang_digunakan')->count(),
+            'selesai' => $bookings->where('status', 'selesai')->count(),
+            'dibatalkan' => $bookings->where('status', 'dibatalkan')->count(),
         ];
 
         $sportSummary = $bookings
@@ -143,7 +142,7 @@ class ReportController extends Controller
         ];
 
         if ($rows === []) {
-            $currentPage[] = $this->formatPdfEmptyRow('Tidak ada data booking final pada periode ini.');
+            $currentPage[] = $this->formatPdfEmptyRow('Tidak ada data booking pada periode ini.');
         } else {
             foreach ($rows as $row) {
                 $currentPage[] = $this->formatPdfRow($row);
@@ -167,12 +166,14 @@ class ReportController extends Controller
         $currentPage[] = $this->tableSeparator();
         $currentPage[] = '';
         $currentPage[] = 'Ringkasan';
-        $currentPage[] = 'Completed : '.$statusSummary['completed'];
-        $currentPage[] = 'Cancelled : '.$statusSummary['cancelled'];
+        $currentPage[] = 'Dibooking : '.$statusSummary['dibooking'];
+        $currentPage[] = 'Sedang digunakan : '.$statusSummary['sedang_digunakan'];
+        $currentPage[] = 'Selesai : '.$statusSummary['selesai'];
+        $currentPage[] = 'Dibatalkan : '.$statusSummary['dibatalkan'];
         $currentPage[] = 'Total harga booking : Rp '.number_format($totalBookingAmount, 0, ',', '.');
         $currentPage[] = 'Total sudah dibayar : Rp '.number_format($totalPaidAmount, 0, ',', '.');
         $currentPage[] = 'Total belum dibayar : Rp '.number_format($totalRemainingAmount, 0, ',', '.');
-        $currentPage[] = 'Total pendapatan booking selesai : Rp '.number_format($totalRevenue, 0, ',', '.');
+        $currentPage[] = 'Total pendapatan terbayar : Rp '.number_format($totalRevenue, 0, ',', '.');
         $pages[] = $currentPage;
 
         $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Booking');

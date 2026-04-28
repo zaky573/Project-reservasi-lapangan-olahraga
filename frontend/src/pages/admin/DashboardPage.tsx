@@ -39,10 +39,10 @@ export function DashboardPage() {
   ];
 
   const totalRevenue = payments
-    .filter((p) => p.status === 'paid')
+    .filter((p) => p.status === 'lunas')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const pendingVerification = payments.filter((p) => p.status === 'pending_verification').length;
+  const pendingVerification = payments.filter((p) => p.status === 'menunggu').length;
 
   const chartData = sports.map((sport) => {
     const sportBookings = bookings.filter((b) => {
@@ -96,7 +96,7 @@ export function DashboardPage() {
               <TrendingUp className="w-10 h-10 text-success" />
               <div>
                 <p className="text-3xl font-bold text-primary">{formatCurrency(totalRevenue)}</p>
-                <p className="text-sm text-muted-foreground">Dari {payments.filter((p) => p.status === 'paid').length} transaksi</p>
+                <p className="text-sm text-muted-foreground">Dari {payments.filter((p) => p.status === 'lunas').length} transaksi</p>
               </div>
             </div>
           </CardContent>

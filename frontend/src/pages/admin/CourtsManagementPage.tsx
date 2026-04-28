@@ -29,6 +29,21 @@ export function CourtsManagementPage() {
     court.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const generateCourtCode = (sportId: string, ignoreCourtId?: string) => {
+    const sport = sports.find((item) => item.id === sportId);
+    if (!sport) return '';
+
+    const usedNumbers = courts
+      .filter((court) => court.sport_id === sportId && court.id !== ignoreCourtId)
+      .map((court) => {
+        const match = court.code.match(new RegExp(`^${sport.code}-(\\d+)$`));
+        return match ? Number(match[1]) : 0;
+      });
+    const nextNumber = Math.max(0, ...usedNumbers) + 1;
+
+    return `${sport.code}-${String(nextNumber).padStart(2, '0')}`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -188,7 +203,14 @@ export function CourtsManagementPage() {
               <label className="block text-sm mb-1.5 text-foreground">Sport</label>
               <select
                 value={formData.sport_id}
-                onChange={(e) => setFormData({ ...formData, sport_id: e.target.value })}
+                onChange={(e) => {
+                  const sportId = e.target.value;
+                  setFormData({
+                    ...formData,
+                    sport_id: sportId,
+                    code: editingCourt ? formData.code : generateCourtCode(sportId),
+                  });
+                }}
                 className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
@@ -203,8 +225,9 @@ export function CourtsManagementPage() {
             <Input
               label="Kode Lapangan"
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="BDM-01"
+              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              placeholder="Otomatis dari kode sport"
+              disabled={!editingCourt}
               required
             />
           </div>

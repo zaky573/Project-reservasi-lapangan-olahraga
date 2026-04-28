@@ -19,7 +19,6 @@ export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [demoOtp, setDemoOtp] = useState('');
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +35,6 @@ export function ForgotPasswordPage() {
     }
 
     setSuccessMessage(result.message);
-    setDemoOtp(result.otp || '');
     setStep('verify-otp');
     setLoading(false);
   };
@@ -189,15 +187,6 @@ export function ForgotPasswordPage() {
           {successMessage && (
             <div className="mt-4 bg-success/10 text-foreground px-4 py-2 rounded-lg text-sm">
               {successMessage}
-            </div>
-          )}
-
-          {demoOtp && step === 'verify-otp' && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg text-xs space-y-1">
-              <p className="font-medium text-foreground">Demo OTP:</p>
-              <p className="text-muted-foreground">
-                Karena ini masih mock auth, OTP yang dikirim adalah: <span className="font-semibold text-primary">{demoOtp}</span>
-              </p>
             </div>
           )}
 

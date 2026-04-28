@@ -91,10 +91,8 @@ export function LoginPage() {
           </div>
 
           <div className="mt-6 p-4 bg-muted/50 rounded-lg text-xs space-y-2">
-            <p className="font-medium text-foreground">Demo Accounts:</p>
-            <p>User: user@thearena.com / user123</p>
-            <p>Admin: admin@thearena.com / admin123</p>
-            <p>Super Admin: superadmin@thearena.com / super123</p>
+            <p className="font-medium text-foreground">Akun login mengikuti data di database Laravel.</p>
+            <p>Jalankan backend terlebih dahulu sebelum mencoba masuk.</p>
           </div>
         </CardContent>
       </Card>

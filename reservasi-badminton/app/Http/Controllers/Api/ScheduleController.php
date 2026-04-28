@@ -29,7 +29,7 @@ class ScheduleController extends Controller
 
         $bookings = Booking::where('court_id', $court->id)
             ->where('booking_date', $date)
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['dibatalkan', 'cancelled'])
             ->get();
 
         $slots = [];

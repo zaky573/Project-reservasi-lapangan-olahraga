@@ -17,7 +17,6 @@ export function RegisterPage() {
   const [step, setStep] = useState<RegisterStep>('form');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [demoOtp, setDemoOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const { register, sendRegisterOtp, verifyRegisterOtp } = useAuth();
   const navigate = useNavigate();
@@ -50,16 +49,15 @@ export function RegisterPage() {
     }
 
     setLoading(true);
-    const result = await sendRegisterOtp(email);
+    const success = await register(name, email, phone, password);
 
-    if (!result.success) {
-      setError(result.message);
+    if (!success) {
+      setError('Registrasi gagal. Pastikan email belum terdaftar dan backend dapat mengirim OTP.');
       setLoading(false);
       return;
     }
 
-    setSuccessMessage('OTP registrasi berhasil dikirim. Silakan verifikasi OTP untuk melanjutkan pendaftaran.');
-    setDemoOtp(result.otp || '');
+    setSuccessMessage('OTP registrasi berhasil dikirim. Silakan cek email dan verifikasi OTP untuk melanjutkan pendaftaran.');
     setStep('verify-otp');
     setLoading(false);
   };
@@ -84,20 +82,27 @@ export function RegisterPage() {
       return;
     }
 
-    const success = await register(name, email, phone, password);
-
-    if (!success) {
-      setError('Registrasi gagal. Pastikan OTP sudah diverifikasi dan email belum terdaftar.');
-      setLoading(false);
-      return;
-    }
-
-    setSuccessMessage('Registrasi berhasil. Silakan login dengan akun Anda.');
+    setSuccessMessage('Registrasi berhasil. Anda akan diarahkan ke halaman booking.');
     setLoading(false);
 
     setTimeout(() => {
-      navigate('/login');
+      navigate('/sports');
     }, 1200);
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+    const result = await sendRegisterOtp(email);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
+    setSuccessMessage(result.message);
   };
 
   return (
@@ -186,14 +191,10 @@ export function RegisterPage() {
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => {
-                  setStep('form');
-                  setOtp('');
-                  setError('');
-                  setSuccessMessage('');
-                }}
+                onClick={handleResendOtp}
+                disabled={loading}
               >
-                Kembali dan Kirim Ulang OTP
+                Kirim Ulang OTP
               </Button>
             </form>
           )}
@@ -207,15 +208,6 @@ export function RegisterPage() {
           {successMessage && (
             <div className="mt-4 bg-success/10 text-foreground px-4 py-2 rounded-lg text-sm">
               {successMessage}
-            </div>
-          )}
-
-          {demoOtp && step === 'verify-otp' && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg text-xs space-y-1">
-              <p className="font-medium text-foreground">Demo OTP Registrasi:</p>
-              <p className="text-muted-foreground">
-                Karena ini masih mock auth, OTP yang dikirim adalah: <span className="font-semibold text-primary">{demoOtp}</span>
-              </p>
             </div>
           )}
 

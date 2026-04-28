@@ -1,22 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { formatCurrency } from '../lib/utils';
-import { generateTimeSlots, TimeSlot } from '../data/mockData';
+import { TimeSlot } from '../data/mockData';
 import { Calendar, Clock, MapPin, Info, Plus, Minus } from 'lucide-react';
 
 export function CourtDetailPage() {
   const { courtId } = useParams();
   const navigate = useNavigate();
-  const { courts, sports } = useAuth();
+  const { courts, sports, fetchSchedule } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
+  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
 
   const court = courts.find((c) => c.id === courtId);
   const sport = court ? sports.find((s) => s.id === court.sport_id) : null;
@@ -29,7 +32,35 @@ export function CourtDetailPage() {
     );
   }
 
-  const slots = useMemo(() => generateTimeSlots(courtId!, selectedDate), [courtId, selectedDate]);
+  useEffect(() => {
+    if (!courtId || !court) return;
+
+    let mounted = true;
+
+    setScheduleLoading(true);
+    setScheduleError('');
+    fetchSchedule(courtId, selectedDate)
+      .then((apiSlots) => {
+        if (mounted) {
+          setSlots(apiSlots);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setSlots([]);
+          setScheduleError('Jadwal gagal dimuat. Pastikan backend Laravel sedang berjalan.');
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setScheduleLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [courtId, court, selectedDate, fetchSchedule]);
 
   const selectedStartSlot = selectedSlots[0] ?? null;
   const selectedEndSlot = selectedSlots[selectedSlots.length - 1] ?? null;
@@ -233,6 +264,18 @@ export function CourtDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {scheduleError && (
+                  <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {scheduleError}
+                  </div>
+                )}
+
+                {scheduleLoading && (
+                  <div className="mb-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                    Memuat jadwal...
+                  </div>
+                )}
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                   {slots.map((slot) => (

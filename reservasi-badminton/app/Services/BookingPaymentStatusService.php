@@ -8,6 +8,16 @@ use Carbon\Carbon;
 
 class BookingPaymentStatusService
 {
+    public const PAYMENT_MENUNGGU = 'menunggu';
+    public const PAYMENT_PEMBAYARAN_AWAL = 'pembayaran_awal';
+    public const PAYMENT_VERIFIKASI_SISA = 'verifikasi_pembayaran_sisa';
+    public const PAYMENT_LUNAS = 'lunas';
+
+    public const BOOKING_DIBOOKING = 'dibooking';
+    public const BOOKING_SEDANG_DIGUNAKAN = 'sedang_digunakan';
+    public const BOOKING_SELESAI = 'selesai';
+    public const BOOKING_DIBATALKAN = 'dibatalkan';
+
     public function syncBooking(Booking $booking): Booking
     {
         $booking->loadMissing('payment');
@@ -25,11 +35,11 @@ class BookingPaymentStatusService
 
         if ($now->greaterThanOrEqualTo($endAt)) {
             if ($isFullyPaid) {
-                $this->updatePaymentStatus($payment, 'lunas');
-                $this->updateBookingStatus($booking, 'completed');
+                $this->updatePaymentStatus($payment, self::PAYMENT_LUNAS);
+                $this->updateBookingStatus($booking, self::BOOKING_SELESAI);
             } else {
                 $this->updatePaymentStatus($payment, $this->resolvePrePlayPaymentStatus($payment));
-                $this->updateBookingStatus($booking, 'cancelled');
+                $this->updateBookingStatus($booking, self::BOOKING_DIBATALKAN);
             }
 
             return $booking->fresh(['payment']);
@@ -37,19 +47,17 @@ class BookingPaymentStatusService
 
         if ($now->greaterThanOrEqualTo($startAt)) {
             if ($isFullyPaid) {
-                $this->updatePaymentStatus($payment, 'sedang_digunakan');
-                $this->updateBookingStatus($booking, 'in_use');
+                $this->updatePaymentStatus($payment, self::PAYMENT_LUNAS);
+                $this->updateBookingStatus($booking, self::BOOKING_SEDANG_DIGUNAKAN);
             }
 
             return $booking->fresh(['payment']);
         }
 
-        if ($payment->payment_status !== 'ditolak') {
-            $this->updatePaymentStatus($payment, $this->resolvePrePlayPaymentStatus($payment));
-        }
+        $this->updatePaymentStatus($payment, $this->resolvePrePlayPaymentStatus($payment));
 
-        if ($booking->status !== 'cancelled' && $booking->status !== 'completed') {
-            $this->updateBookingStatus($booking, 'dibooking');
+        if (! in_array($booking->status, [self::BOOKING_DIBATALKAN, self::BOOKING_SELESAI, 'cancelled', 'completed'], true)) {
+            $this->updateBookingStatus($booking, self::BOOKING_DIBOOKING);
         }
 
         return $booking->fresh(['payment']);
@@ -65,7 +73,7 @@ class BookingPaymentStatusService
     public function isFullyPaid(Payment $payment): bool
     {
         return (float) $payment->remaining_amount <= 0
-            && $payment->payment_status !== 'ditolak';
+            && $payment->payment_status !== self::PAYMENT_MENUNGGU;
     }
 
     public function normalizeAmounts(Payment $payment, ?float $paidAmount = null): array
@@ -81,12 +89,12 @@ class BookingPaymentStatusService
 
     public function resolvePaidAmountForUpdate(Payment $payment, ?string $requestedStatus, ?float $paidAmount = null): float
     {
-        if (in_array($requestedStatus, ['lunas', 'sedang_digunakan'], true)) {
+        if ($requestedStatus === self::PAYMENT_LUNAS) {
             return (float) $payment->amount;
         }
 
-        if ($requestedStatus === 'dibayar_sebagian' && $payment->payment_method === 'cash') {
-            return round((float) $payment->amount * 0.25, 2);
+        if ($requestedStatus === self::PAYMENT_PEMBAYARAN_AWAL && $payment->payment_method === 'cash') {
+            return (float) ($paidAmount ?? round((float) $payment->amount * 0.25, 2));
         }
 
         return (float) ($paidAmount ?? $payment->paid_amount ?? 0);
@@ -94,42 +102,64 @@ class BookingPaymentStatusService
 
     public function resolveStatusForUpdate(Payment $payment, ?string $requestedStatus, ?float $paidAmount = null): string
     {
-        if ($requestedStatus === 'ditolak') {
-            return 'ditolak';
-        }
-
         $amounts = $this->normalizeAmounts($payment, $paidAmount);
 
         if ($amounts['remaining_amount'] <= 0) {
-            $startAt = Carbon::parse($payment->booking->booking_date.' '.$payment->booking->start_time);
-            $endAt = Carbon::parse($payment->booking->booking_date.' '.$payment->booking->end_time);
-            $now = now();
+            return self::PAYMENT_LUNAS;
+        }
 
-            if ($now->greaterThanOrEqualTo($startAt) && $now->lt($endAt)) {
-                return 'sedang_digunakan';
-            }
-
-            return 'lunas';
+        if (
+            $requestedStatus
+            && in_array($requestedStatus, [
+                self::PAYMENT_PEMBAYARAN_AWAL,
+                self::PAYMENT_VERIFIKASI_SISA,
+                self::PAYMENT_MENUNGGU,
+            ], true)
+        ) {
+            return $requestedStatus;
         }
 
         if ($amounts['paid_amount'] > 0) {
-            return 'dibayar_sebagian';
+            return $this->resolvePartialPaymentStatus($payment, (float) $amounts['paid_amount']);
         }
 
-        return 'menunggu';
+        return self::PAYMENT_MENUNGGU;
     }
 
-    private function resolvePrePlayPaymentStatus(Payment $payment): string
+    public function resolvePrePlayPaymentStatus(Payment $payment): string
     {
+        $payment->loadMissing('details');
+
+        if ($payment->details->contains('status', 'menunggu')) {
+            return self::PAYMENT_MENUNGGU;
+        }
+
         if ($this->isFullyPaid($payment)) {
-            return 'lunas';
+            return self::PAYMENT_LUNAS;
         }
 
         if ((float) $payment->paid_amount > 0) {
-            return 'dibayar_sebagian';
+            return $this->resolvePartialPaymentStatus($payment, (float) $payment->paid_amount);
         }
 
-        return 'menunggu';
+        return self::PAYMENT_MENUNGGU;
+    }
+
+    public function resolvePartialPaymentStatus(Payment $payment, float $paidAmount): string
+    {
+        if ($paidAmount <= 0) {
+            return self::PAYMENT_MENUNGGU;
+        }
+
+        if ($payment->payment_method === 'cash') {
+            $minimumDp = round((float) $payment->amount * 0.25, 2);
+
+            return $paidAmount <= $minimumDp
+                ? self::PAYMENT_PEMBAYARAN_AWAL
+                : self::PAYMENT_VERIFIKASI_SISA;
+        }
+
+        return self::PAYMENT_VERIFIKASI_SISA;
     }
 
     private function updatePaymentStatus(Payment $payment, string $status): void
@@ -140,7 +170,7 @@ class BookingPaymentStatusService
 
         $payment->forceFill([
             'payment_status' => $status,
-            'paid_at' => in_array($status, ['lunas', 'sedang_digunakan'], true) ? ($payment->paid_at ?? now()) : null,
+            'paid_at' => $status === self::PAYMENT_LUNAS ? ($payment->paid_at ?? now()) : null,
         ])->save();
     }
 

@@ -35,17 +35,16 @@ class DashboardController extends Controller
             'bookings' => [
                 'today' => Booking::where('booking_date', $today)->count(),
                 'dibooking' => Booking::where('status', 'dibooking')->count(),
-                'in_use' => Booking::where('status', 'in_use')->count(),
-                'completed' => Booking::where('status', 'completed')->count(),
-                'cancelled' => Booking::where('status', 'cancelled')->count(),
+                'sedang_digunakan' => Booking::where('status', 'sedang_digunakan')->count(),
+                'selesai' => Booking::where('status', 'selesai')->count(),
+                'dibatalkan' => Booking::where('status', 'dibatalkan')->count(),
             ],
 
             'payments' => [
                 'menunggu' => Payment::where('payment_status', 'menunggu')->count(),
-                'dibayar_sebagian' => Payment::where('payment_status', 'dibayar_sebagian')->count(),
+                'pembayaran_awal' => Payment::where('payment_status', 'pembayaran_awal')->count(),
+                'verifikasi_pembayaran_sisa' => Payment::where('payment_status', 'verifikasi_pembayaran_sisa')->count(),
                 'lunas' => Payment::where('payment_status', 'lunas')->count(),
-                'sedang_digunakan' => Payment::where('payment_status', 'sedang_digunakan')->count(),
-                'ditolak' => Payment::where('payment_status', 'ditolak')->count(),
             ],
 
             'sports_breakdown' => Sport::withCount('courts')->get()->map(function ($sport) {

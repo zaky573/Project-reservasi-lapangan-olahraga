@@ -8,7 +8,7 @@ import { formatCurrency, formatDateTime } from '../lib/utils';
 import { Banknote, Calendar, FileImage, Upload } from 'lucide-react';
 
 export function MyBookingsPage() {
-  const { currentUser, bookings, payments, courts, updatePayment } = useAuth();
+  const { currentUser, bookings, payments, courts, submitPaymentDetail } = useAuth();
   const [remainingProofFiles, setRemainingProofFiles] = useState<Record<string, File | null>>({});
   const [paymentActionErrors, setPaymentActionErrors] = useState<Record<string, string>>({});
   const [paymentActionMessages, setPaymentActionMessages] = useState<Record<string, string>>({});
@@ -17,13 +17,13 @@ export function MyBookingsPage() {
 
   const getBookingStatusBadge = (status: string) => {
     switch (status) {
-      case 'confirmed':
-        return <Badge variant="success">Terkonfirmasi</Badge>;
-      case 'pending':
-        return <Badge variant="warning">Menunggu</Badge>;
-      case 'completed':
-        return <Badge variant="info">Selesai</Badge>;
-      case 'cancelled':
+      case 'dibooking':
+        return <Badge variant="warning">Dibooking</Badge>;
+      case 'sedang_digunakan':
+        return <Badge variant="info">Sedang Digunakan</Badge>;
+      case 'selesai':
+        return <Badge variant="success">Selesai</Badge>;
+      case 'dibatalkan':
         return <Badge variant="danger">Dibatalkan</Badge>;
       default:
         return null;
@@ -32,14 +32,14 @@ export function MyBookingsPage() {
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
-        return <Badge variant="success">Approve</Badge>;
-      case 'pending_verification':
-        return <Badge variant="warning">Menunggu Verifikasi</Badge>;
-      case 'pending':
-        return <Badge variant="info">Pending</Badge>;
-      case 'rejected':
-        return <Badge variant="danger">Ditolak</Badge>;
+      case 'lunas':
+        return <Badge variant="success">Lunas</Badge>;
+      case 'menunggu':
+        return <Badge variant="warning">Menunggu</Badge>;
+      case 'pembayaran_awal':
+        return <Badge variant="info">Pembayaran Awal</Badge>;
+      case 'verifikasi_pembayaran_sisa':
+        return <Badge variant="warning">Verifikasi Pembayaran Sisa</Badge>;
       default:
         return null;
     }
@@ -48,15 +48,15 @@ export function MyBookingsPage() {
   const getPaymentNote = (payment: Payment, remainingAmount: number) => {
     if (payment.admin_note) return payment.admin_note;
 
-    if (payment.status === 'paid') {
+    if (payment.status === 'lunas') {
       return `Pembayaran sudah memenuhi syarat. Uang masuk tercatat ${formatCurrency(payment.amount)}.`;
     }
 
-    if (payment.status === 'pending_verification' && payment.pending_amount) {
-      return `Bukti transfer sisa ${formatCurrency(payment.pending_amount)} sudah dikirim dan sedang menunggu verifikasi admin.`;
+    if (payment.status === 'menunggu' && payment.pending_amount) {
+      return `Bukti pembayaran ${formatCurrency(payment.pending_amount)} sudah dikirim dan sedang menunggu verifikasi admin.`;
     }
 
-    if (payment.status === 'pending') {
+    if (payment.status === 'pembayaran_awal' || payment.status === 'verifikasi_pembayaran_sisa') {
       if (payment.settlement_method === 'cash_at_venue') {
         return `Anda memilih membayar sisa ${formatCurrency(remainingAmount)} secara cash saat datang ke lapangan.`;
       }
@@ -90,7 +90,7 @@ export function MyBookingsPage() {
     setPaymentMessage(paymentId, '');
   };
 
-  const handleTransferRemaining = (payment: Payment, remainingAmount: number) => {
+  const handleTransferRemaining = async (payment: Payment, remainingAmount: number) => {
     const proofFile = remainingProofFiles[payment.id];
 
     if (!proofFile) {
@@ -98,38 +98,23 @@ export function MyBookingsPage() {
       return;
     }
 
-    const proofUrl = URL.createObjectURL(proofFile);
-    const message = `User mengirim bukti transfer sisa ${formatCurrency(remainingAmount)}. Menunggu verifikasi admin.`;
-
-    updatePayment(payment.id, {
-      status: 'pending_verification',
-      settlement_method: 'transfer',
-      pending_amount: remainingAmount,
-      pending_proof_url: proofUrl,
-      customer_note: message,
-      admin_note: message,
-      verified_by: undefined,
-      verified_at: undefined,
-    });
-
-    handleRemainingProofChange(payment.id, null);
-    setPaymentMessage(payment.id, 'Bukti transfer sisa berhasil dikirim dan sedang menunggu verifikasi admin.');
+    try {
+      await submitPaymentDetail(payment.booking_id, 'transfer', remainingAmount, proofFile);
+      handleRemainingProofChange(payment.id, null);
+      setPaymentMessage(payment.id, 'Bukti transfer sisa berhasil dikirim dan sedang menunggu verifikasi admin.');
+    } catch (error: any) {
+      setPaymentError(payment.id, error?.message || 'Gagal mengirim bukti transfer sisa.');
+    }
   };
 
-  const handlePayAtVenue = (payment: Payment, remainingAmount: number) => {
-    const message = `User memilih membayar sisa ${formatCurrency(remainingAmount)} secara cash saat datang ke lapangan.`;
-
-    updatePayment(payment.id, {
-      status: 'pending',
-      settlement_method: 'cash_at_venue',
-      pending_amount: undefined,
-      pending_proof_url: undefined,
-      customer_note: message,
-      admin_note: message,
-    });
-
-    setPaymentError(payment.id, '');
-    setPaymentMessage(payment.id, 'Pilihan bayar cash saat datang sudah dicatat.');
+  const handlePayAtVenue = async (payment: Payment, remainingAmount: number) => {
+    try {
+      await submitPaymentDetail(payment.booking_id, 'cash', remainingAmount, null, 'Pembayaran cash saat datang ke lapangan.');
+      setPaymentError(payment.id, '');
+      setPaymentMessage(payment.id, 'Pilihan bayar cash saat datang sudah dicatat.');
+    } catch (error: any) {
+      setPaymentError(payment.id, error?.message || 'Gagal mencatat pembayaran cash.');
+    }
   };
 
   return (
@@ -159,8 +144,13 @@ export function MyBookingsPage() {
               .map((booking) => {
                 const court = courts.find((c) => c.id === booking.court_id);
                 const payment = payments.find((p) => p.booking_id === booking.id);
+                const paidAmount = payment
+                  ? payment.status === 'menunggu'
+                    ? payment.paid_amount || 0
+                    : payment.amount
+                  : 0;
                 const remainingAmount = payment
-                  ? Math.max(booking.total_price - payment.amount, 0)
+                  ? Math.max(booking.total_price - paidAmount, 0)
                   : booking.total_price;
                 const remainingProofFile = payment ? remainingProofFiles[payment.id] : null;
                 const paymentActionError = payment ? paymentActionErrors[payment.id] : '';
@@ -224,7 +214,7 @@ export function MyBookingsPage() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                             <div>
                               <p className="text-muted-foreground">
-                                {payment.status === 'pending_verification' && !payment.pending_amount ? 'Nominal Diajukan' : 'Uang Masuk'}
+                                {payment.status === 'menunggu' && !payment.pending_amount ? 'Nominal Diajukan' : 'Uang Masuk'}
                               </p>
                               <p className="font-medium text-primary">{formatCurrency(payment.amount)}</p>
                             </div>
@@ -247,7 +237,7 @@ export function MyBookingsPage() {
                           </div>
                         </div>
                       )}
-                      {payment?.status === 'pending' && remainingAmount > 0 && (
+                      {payment && payment.status !== 'menunggu' && payment.status !== 'lunas' && remainingAmount > 0 && (
                         <div className="mt-4 rounded-lg border border-primary/15 bg-primary/5 p-4">
                           <div className="mb-4">
                             <p className="font-semibold text-foreground">Bayar Sisa Pembayaran</p>

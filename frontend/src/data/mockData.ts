@@ -2,8 +2,8 @@ export type UserRole = 'user' | 'admin' | 'super_admin';
 
 export type CourtStatus = 'active' | 'inactive' | 'maintenance';
 export type SlotStatus = 'available' | 'booked' | 'maintenance';
-export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
-export type PaymentStatus = 'pending' | 'pending_verification' | 'paid' | 'rejected';
+export type BookingStatus = 'dibooking' | 'sedang_digunakan' | 'selesai' | 'dibatalkan';
+export type PaymentStatus = 'menunggu' | 'pembayaran_awal' | 'verifikasi_pembayaran_sisa' | 'lunas';
 export type PaymentMethod = 'cash' | 'transfer';
 export type SettlementMethod = 'transfer' | 'cash_at_venue';
 
@@ -19,6 +19,7 @@ export interface User {
 export interface Sport {
   id: string;
   name: string;
+  code: string;
   description: string;
   icon: string;
   created_at: string;
@@ -63,6 +64,8 @@ export interface Payment {
   id: string;
   booking_id: string;
   amount: number;
+  paid_amount?: number;
+  total_amount?: number;
   method: PaymentMethod;
   status: PaymentStatus;
   proof_url?: string;
@@ -115,6 +118,7 @@ export const mockSports: Sport[] = [
   {
     id: '1',
     name: 'Badminton',
+    code: 'BDM',
     description: 'Lapangan badminton indoor dengan lantai vinyl berkualitas',
     icon: '🏸',
     created_at: '2024-01-01T00:00:00Z',
@@ -122,6 +126,7 @@ export const mockSports: Sport[] = [
   {
     id: '2',
     name: 'Futsal',
+    code: 'FTS',
     description: 'Lapangan futsal outdoor dengan rumput sintetis premium',
     icon: '⚽',
     created_at: '2024-01-01T00:00:00Z',
@@ -129,6 +134,7 @@ export const mockSports: Sport[] = [
   {
     id: '3',
     name: 'Basketball',
+    code: 'BSK',
     description: 'Lapangan basket indoor dengan standar internasional',
     icon: '🏀',
     created_at: '2024-01-15T00:00:00Z',
@@ -247,7 +253,7 @@ export const mockBookings: Booking[] = [
     total_price: 80000,
     customer_name: 'John Doe',
     customer_phone: '08123456789',
-    status: 'confirmed',
+    status: 'dibooking',
     created_at: '2026-04-18T10:00:00Z',
   },
   {
@@ -260,7 +266,7 @@ export const mockBookings: Booking[] = [
     total_price: 150000,
     customer_name: 'John Doe',
     customer_phone: '08123456789',
-    status: 'confirmed',
+    status: 'dibooking',
     created_at: '2026-04-19T14:30:00Z',
   },
   {
@@ -273,7 +279,7 @@ export const mockBookings: Booking[] = [
     total_price: 80000,
     customer_name: 'Jane Smith',
     customer_phone: '08456789012',
-    status: 'completed',
+    status: 'selesai',
     created_at: '2026-04-15T09:00:00Z',
   },
 ];
@@ -284,7 +290,7 @@ export const mockPayments: Payment[] = [
     booking_id: '1',
     amount: 80000,
     method: 'transfer',
-    status: 'paid',
+    status: 'lunas',
     proof_url: 'https://images.unsplash.com/photo-1554224311-beee460ae6fb?w=400',
     admin_note: 'Pembayaran sudah memenuhi syarat.',
     verified_by: '2',
@@ -296,7 +302,7 @@ export const mockPayments: Payment[] = [
     booking_id: '2',
     amount: 150000,
     method: 'transfer',
-    status: 'pending_verification',
+    status: 'menunggu',
     proof_url: 'https://images.unsplash.com/photo-1554224311-beee460ae6fb?w=400',
     created_at: '2026-04-19T15:00:00Z',
   },
@@ -305,7 +311,7 @@ export const mockPayments: Payment[] = [
     booking_id: '3',
     amount: 80000,
     method: 'cash',
-    status: 'paid',
+    status: 'lunas',
     admin_note: 'Pembayaran sudah memenuhi syarat.',
     created_at: '2026-04-15T09:30:00Z',
   },
