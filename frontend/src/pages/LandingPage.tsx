@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Trophy, MapPin, Clock, CreditCard, CheckCircle, Mail, Phone } from 'lucide-react';
+import { Trophy, MapPin, Clock, CreditCard, CheckCircle, Mail, Phone, Users, ShieldCheck, Wifi, Coffee } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 
@@ -27,34 +27,91 @@ export function LandingPage() {
     },
   ];
 
+  const facilities = [
+    {
+      icon: Users,
+      title: 'Ruang Ganti Nyaman',
+      description: 'Fasilitas ganti dan loker yang bersih dan aman untuk setiap pemain.',
+    },
+    {
+      icon: Wifi,
+      title: 'Internet Gratis',
+      description: 'Wi-Fi tersedia di area lapangan untuk kenyamanan pengguna.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Keamanan Terjamin',
+      description: 'Area yang terjaga dengan baik sehingga Anda bisa fokus bermain.',
+    },
+    {
+      icon: Coffee,
+      title: 'Area Santai',
+      description: 'Tempat istirahat dengan minuman ringan setelah bermain.',
+    },
+  ];
+
   return (
     <div className="min-h-screen">
-      <section className="bg-gradient-to-br from-primary via-secondary to-accent text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Selamat Datang di THE ARENA
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-white/90">
-              Platform reservasi lapangan olahraga terlengkap dan termudah
-            </p>
-            <div className="flex items-center justify-center space-x-4">
-              <Link to="/register">
-                <Button variant="primary" size="lg" className="bg-white text-primary hover:bg-white/90">
-                  Mulai Booking Sekarang
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-primary">
-                  Login
-                </Button>
-              </Link>
-            </div>
+      <section
+        className="relative text-white py-24 bg-cover bg-center"
+        style={{
+          backgroundImage: "url('/images/PREAU.jpg')",
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+            Selamat Datang di THE ARENA
+          </h1>
+          <p className="text-xl md:text-2xl mb-8 text-white/90">
+            Platform reservasi lapangan olahraga terlengkap dan termudah.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/register">
+              <Button variant="primary" size="lg" className="bg-white text-primary hover:bg-white/90">
+                Mulai Booking Sekarang
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-primary">
+                Login
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
       <section className="py-16 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground">Fasilitas Unggulan Kami</h2>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
+              Rasakan kenyamanan booking lapangan dengan fasilitas lengkap dan area yang terawat.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {facilities.map((facility, index) => {
+              const Icon = facility.icon;
+              return (
+                <Card key={index}>
+                  <CardContent className="text-center pt-8 pb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4 mx-auto">
+                      <Icon className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="font-semibold mb-2 text-foreground">{facility.title}</h3>
+                    <p className="text-sm text-muted-foreground">{facility.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12 text-foreground">
             Kenapa Pilih THE ARENA?
