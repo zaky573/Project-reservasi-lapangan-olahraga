@@ -8,21 +8,21 @@ export function Sidebar() {
   const location = useLocation();
 
   const adminMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Trophy, label: 'Sports', path: '/admin/sports' },
+    { icon: LayoutDashboard, label: 'Dasbor', path: '/dashboard' },
+    { icon: Trophy, label: 'Olahraga', path: '/admin/sports' },
     { icon: MapPin, label: 'Lapangan', path: '/admin/courts' },
-    { icon: Calendar, label: 'Booking', path: '/admin/bookings' },
-    { icon: CreditCard, label: 'Payment', path: '/admin/payments' },
+    { icon: Calendar, label: 'Reservasi', path: '/admin/bookings' },
+    { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments' },
   ];
 
   const superAdminMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Trophy, label: 'Sports', path: '/admin/sports' },
+    { icon: LayoutDashboard, label: 'Dasbor', path: '/dashboard' },
+    { icon: Trophy, label: 'Olahraga', path: '/admin/sports' },
     { icon: MapPin, label: 'Lapangan', path: '/admin/courts' },
-    { icon: Calendar, label: 'Booking', path: '/admin/bookings' },
-    { icon: CreditCard, label: 'Payment', path: '/admin/payments' },
-    { icon: Users, label: 'Admin Management', path: '/super-admin/admins' },
-    { icon: FileText, label: 'Reports', path: '/super-admin/reports' },
+    { icon: Calendar, label: 'Reservasi', path: '/admin/bookings' },
+    { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments' },
+    { icon: Users, label: 'Kelola Admin', path: '/super-admin/admins' },
+    { icon: FileText, label: 'Rekap Data', path: '/super-admin/reports' },
   ];
 
   const menuItems = currentUser?.role === 'super_admin' ? superAdminMenuItems : adminMenuItems;
@@ -33,7 +33,7 @@ export function Sidebar() {
     <aside className="bg-sidebar w-64 min-h-screen border-r border-sidebar-border">
       <div className="p-6">
         <h2 className="text-sidebar-foreground text-xl font-bold">
-          {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Admin Panel'}
+          {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Panel Admin'}
         </h2>
       </div>
       <nav className="px-3">

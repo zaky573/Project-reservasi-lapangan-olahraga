@@ -37,8 +37,8 @@ export function BookingsManagementPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Bookings Management</h1>
-        <p className="text-muted-foreground mt-2">Kelola semua booking lapangan</p>
+        <h1 className="text-3xl font-bold text-foreground">Manajemen Reservasi</h1>
+        <p className="text-muted-foreground mt-2">Kelola semua reservasi lapangan</p>
       </div>
 
       <Card>
@@ -48,7 +48,7 @@ export function BookingsManagementPage() {
               <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Cari booking..."
+                placeholder="Cari reservasi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -73,7 +73,7 @@ export function BookingsManagementPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Customer</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Pelanggan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Lapangan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tanggal</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Waktu</th>
@@ -109,7 +109,7 @@ export function BookingsManagementPage() {
             </table>
             {filteredBookings.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
-                Tidak ada booking ditemukan
+                Tidak ada reservasi ditemukan
               </div>
             )}
           </div>

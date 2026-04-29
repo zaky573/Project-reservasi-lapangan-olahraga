@@ -107,7 +107,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 */
 Route::middleware(['auth:sanctum', 'super_admin'])->group(function () {
     // Create new admin
+    Route::get('/admins', [AdminController::class, 'index']);
     Route::post('/admins', [AdminController::class, 'store']);
+    Route::put('/admins/{id}/reset-password', [AdminController::class, 'resetPassword']);
 
     Route::post('/super-admin/logout', [AuthController::class, 'logoutSuperAdmin']);
 

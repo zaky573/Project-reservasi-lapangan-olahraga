@@ -74,11 +74,11 @@ export function CourtsManagementPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="success">Active</Badge>;
+        return <Badge variant="success">Aktif</Badge>;
       case 'inactive':
-        return <Badge variant="danger">Inactive</Badge>;
+        return <Badge variant="danger">Tidak Aktif</Badge>;
       case 'maintenance':
-        return <Badge variant="warning">Maintenance</Badge>;
+        return <Badge variant="warning">Pemeliharaan</Badge>;
       default:
         return null;
     }
@@ -88,7 +88,7 @@ export function CourtsManagementPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Courts Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Manajemen Lapangan</h1>
           <p className="text-muted-foreground mt-2">Kelola lapangan olahraga</p>
         </div>
         <Button
@@ -132,7 +132,7 @@ export function CourtsManagementPage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Kode</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nama</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Sport</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Olahraga</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Harga/Jam</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Aksi</th>
@@ -200,7 +200,7 @@ export function CourtsManagementPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm mb-1.5 text-foreground">Sport</label>
+              <label className="block text-sm mb-1.5 text-foreground">Olahraga</label>
               <select
                 value={formData.sport_id}
                 onChange={(e) => {
@@ -214,7 +214,7 @@ export function CourtsManagementPage() {
                 className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
-                <option value="">Pilih Sport</option>
+                <option value="">Pilih Olahraga</option>
                 {sports.map((sport) => (
                   <option key={sport.id} value={sport.id}>
                     {sport.name}
@@ -226,7 +226,7 @@ export function CourtsManagementPage() {
               label="Kode Lapangan"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              placeholder="Otomatis dari kode sport"
+              placeholder="Otomatis dari kode olahraga"
               disabled={!editingCourt}
               required
             />
@@ -252,9 +252,9 @@ export function CourtsManagementPage() {
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="maintenance">Maintenance</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Tidak Aktif</option>
+                <option value="maintenance">Pemeliharaan</option>
               </select>
             </div>
           </div>
@@ -269,7 +269,7 @@ export function CourtsManagementPage() {
               Batal
             </Button>
             <Button type="submit" variant="primary">
-              {editingCourt ? 'Update' : 'Tambah'}
+              {editingCourt ? 'Perbarui' : 'Tambah'}
             </Button>
           </div>
         </form>

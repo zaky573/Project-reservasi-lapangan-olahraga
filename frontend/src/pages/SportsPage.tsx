@@ -46,7 +46,7 @@ export function SportsPage() {
 
         {sports.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Belum ada sport tersedia</p>
+            <p className="text-muted-foreground">Belum ada olahraga tersedia</p>
           </div>
         )}
       </div>

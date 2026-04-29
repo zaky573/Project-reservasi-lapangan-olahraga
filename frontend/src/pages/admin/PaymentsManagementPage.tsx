@@ -100,14 +100,14 @@ export function PaymentsManagementPage() {
 
     if (payment.status === 'verifikasi_pembayaran_sisa') {
       if (payment.settlement_method === 'cash_at_venue') {
-        return `Customer memilih membayar sisa ${formatCurrency(payment.remainingAmount)} secara cash saat datang ke lapangan.`;
+        return `Pelanggan memilih membayar sisa ${formatCurrency(payment.remainingAmount)} secara tunai saat datang ke lapangan.`;
       }
 
-      return `Pembayaran masih kurang ${formatCurrency(payment.remainingAmount)}. Hubungi customer untuk pembayaran sisa.`;
+      return `Pembayaran masih kurang ${formatCurrency(payment.remainingAmount)}. Hubungi pelanggan untuk pembayaran sisa.`;
     }
 
     if (payment.status === 'menunggu' && payment.pending_amount) {
-      return `Customer mengirim bukti pembayaran ${formatCurrency(payment.pending_amount)}. Silakan cek bukti lalu simpan status pembayaran.`;
+      return `Pelanggan mengirim bukti pembayaran ${formatCurrency(payment.pending_amount)}. Silakan cek bukti lalu simpan status pembayaran.`;
     }
 
     return 'Bukti pembayaran masih menunggu pengecekan admin.';
@@ -135,9 +135,9 @@ export function PaymentsManagementPage() {
     }
 
     const message = [
-      `Halo ${payment.booking?.customer_name || 'Customer'},`,
-      `pembayaran booking #${payment.booking_id} masih kurang ${formatCurrency(payment.remainingAmount)}.`,
-      `Mohon lakukan pembayaran sisa agar booking tetap aktif.`,
+      `Halo ${payment.booking?.customer_name || 'Pelanggan'},`,
+      `pembayaran reservasi #${payment.booking_id} masih kurang ${formatCurrency(payment.remainingAmount)}.`,
+      `Mohon lakukan pembayaran sisa agar reservasi tetap aktif.`,
       `Terima kasih.`,
     ].join(' ');
 
@@ -164,6 +164,10 @@ export function PaymentsManagementPage() {
     setSettlementAmount(payment.remainingAmount > 0 ? String(payment.remainingAmount) : '');
     setSettlementError('');
     setIsModalOpen(true);
+  };
+
+  const getMethodLabel = (method: string) => {
+    return method === 'cash' ? 'Tunai' : 'Transfer';
   };
 
   const handleApprove = (payment: PaymentWithRelations) => {
@@ -325,8 +329,8 @@ export function PaymentsManagementPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Payments Management</h1>
-        <p className="text-muted-foreground mt-2">Kelola pembayaran dan pelunasan booking</p>
+        <h1 className="text-3xl font-bold text-foreground">Manajemen Pembayaran</h1>
+        <p className="text-muted-foreground mt-2">Kelola pembayaran dan pelunasan reservasi</p>
       </div>
 
       <Card>
@@ -336,7 +340,7 @@ export function PaymentsManagementPage() {
               <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Cari nama, email, atau booking..."
+                placeholder="Cari nama, email, atau reservasi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -416,7 +420,7 @@ export function PaymentsManagementPage() {
             </table>
             {filteredPayments.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
-                Tidak ada payment ditemukan
+                Tidak ada pembayaran ditemukan
               </div>
             )}
           </div>
@@ -446,7 +450,7 @@ export function PaymentsManagementPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Metode</p>
-                <p className="font-medium text-foreground capitalize">{selectedPayment.method}</p>
+                <p className="font-medium text-foreground">{getMethodLabel(selectedPayment.method)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Tagihan</p>
@@ -509,7 +513,7 @@ export function PaymentsManagementPage() {
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => openWhatsApp(selectedPayment)}>
                   <MessageCircle className="w-4 h-4 mr-2" />
-                  Chat WhatsApp Customer
+                  Chat WhatsApp Pelanggan
                 </Button>
               </div>
             )}
@@ -559,7 +563,7 @@ export function PaymentsManagementPage() {
                 </div>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Gunakan form ini saat customer sudah transfer tambahan atau membayar sisa tagihan langsung di lapangan.
+                    Gunakan form ini saat pelanggan sudah transfer tambahan atau membayar sisa tagihan langsung di lapangan.
                   </p>
                   <Input
                     type="number"

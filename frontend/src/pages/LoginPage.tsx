@@ -39,9 +39,9 @@ export function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-primary">Login ke THE ARENA</h1>
+            <h1 className="text-2xl font-bold text-primary">Masuk ke THE ARENA</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Masuk untuk mulai booking lapangan
+              Masuk untuk mulai reservasi lapangan
             </p>
           </div>
         </CardHeader>
@@ -77,7 +77,7 @@ export function LoginPage() {
             )}
 
             <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-              {loading ? 'Loading...' : 'Login'}
+              {loading ? 'Memuat...' : 'Masuk'}
             </Button>
           </form>
 
@@ -91,7 +91,7 @@ export function LoginPage() {
           </div>
 
           <div className="mt-6 p-4 bg-muted/50 rounded-lg text-xs space-y-2">
-            <p className="font-medium text-foreground">Akun login mengikuti data di database Laravel.</p>
+            <p className="font-medium text-foreground">Akun masuk mengikuti data di database Laravel.</p>
             <p>Jalankan backend terlebih dahulu sebelum mencoba masuk.</p>
           </div>
         </CardContent>

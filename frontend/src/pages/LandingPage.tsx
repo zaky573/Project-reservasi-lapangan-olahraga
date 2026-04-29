@@ -17,13 +17,13 @@ export function LandingPage() {
     },
     {
       icon: Clock,
-      title: 'Booking Mudah & Cepat',
+      title: 'Reservasi Mudah & Cepat',
       description: 'Pilih jadwal, bayar, dan main!',
     },
     {
       icon: CreditCard,
       title: 'Pembayaran Fleksibel',
-      description: 'Cash atau transfer, semuanya bisa',
+      description: 'Tunai atau transfer, semuanya bisa',
     },
   ];
 
@@ -72,12 +72,12 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/register">
               <Button variant="primary" size="lg" className="bg-white text-primary hover:bg-white/90">
-                Mulai Booking Sekarang
+                Mulai Reservasi Sekarang
               </Button>
             </Link>
             <Link to="/login">
               <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-primary">
-                Login
+                Masuk
               </Button>
             </Link>
           </div>
@@ -89,7 +89,7 @@ export function LandingPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground">Fasilitas Unggulan Kami</h2>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              Rasakan kenyamanan booking lapangan dengan fasilitas lengkap dan area yang terawat.
+              Rasakan kenyamanan reservasi lapangan dengan fasilitas lengkap dan area yang terawat.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -140,14 +140,14 @@ export function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold mb-6 text-foreground">
-                Cara Booking di THE ARENA
+                Cara Reservasi di THE ARENA
               </h2>
               <div className="space-y-4">
                 {[
                   'Pilih jenis olahraga favorit Anda',
                   'Pilih lapangan yang tersedia',
                   'Tentukan tanggal dan waktu bermain',
-                  'Isi data booking dan pilih metode pembayaran',
+                  'Isi data reservasi dan pilih metode pembayaran',
                   'Upload bukti pembayaran (jika transfer)',
                   'Tunggu konfirmasi dan siap bermain!',
                 ].map((step, index) => (
@@ -187,10 +187,10 @@ export function LandingPage() {
               <h4 className="text-lg font-semibold mb-4">Navigasi Cepat</h4>
               <div className="space-y-3 text-white/90">
                 <Link to="/register" className="block hover:text-white transition-colors">
-                  Mulai Booking
+                  Mulai Reservasi
                 </Link>
                 <Link to="/login" className="block hover:text-white transition-colors">
-                  Login
+                  Masuk
                 </Link>
                 <Link to="/sports" className="block hover:text-white transition-colors">
                   Lihat Olahraga

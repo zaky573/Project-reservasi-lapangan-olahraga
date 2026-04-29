@@ -130,7 +130,7 @@ export async function apiDownloadBlob(path: string, query?: ApiQuery) {
     const contentType = response.headers.get('content-type') || '';
     const data = contentType.includes('application/json') ? await response.json() : await response.text();
 
-    throw new ApiError(resolveMessage(data, 'Download gagal'), response.status, data);
+    throw new ApiError(resolveMessage(data, 'Unduh gagal'), response.status, data);
   }
 
   return response.blob();

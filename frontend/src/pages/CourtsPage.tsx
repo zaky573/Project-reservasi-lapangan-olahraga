@@ -15,7 +15,7 @@ export function CourtsPage() {
   if (!sport) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Sport tidak ditemukan</p>
+        <p className="text-muted-foreground">Olahraga tidak ditemukan</p>
       </div>
     );
   }
@@ -27,7 +27,7 @@ export function CourtsPage() {
       case 'inactive':
         return <Badge variant="danger">Tidak Aktif</Badge>;
       case 'maintenance':
-        return <Badge variant="warning">Maintenance</Badge>;
+        return <Badge variant="warning">Pemeliharaan</Badge>;
       default:
         return null;
     }

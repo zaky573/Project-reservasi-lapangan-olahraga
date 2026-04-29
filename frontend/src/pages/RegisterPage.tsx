@@ -82,7 +82,7 @@ export function RegisterPage() {
       return;
     }
 
-    setSuccessMessage('Registrasi berhasil. Anda akan diarahkan ke halaman booking.');
+    setSuccessMessage('Registrasi berhasil. Anda akan diarahkan ke halaman reservasi.');
     setLoading(false);
 
     setTimeout(() => {
@@ -112,7 +112,7 @@ export function RegisterPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-primary">Daftar di THE ARENA</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Buat akun, kirim OTP, lalu verifikasi sebelum login
+              Buat akun, kirim OTP, lalu verifikasi sebelum masuk
             </p>
           </div>
         </CardHeader>
@@ -161,7 +161,7 @@ export function RegisterPage() {
               />
 
               <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-                {loading ? 'Mengirim OTP...' : 'Send OTP'}
+                {loading ? 'Mengirim OTP...' : 'Kirim OTP'}
               </Button>
             </form>
           )}
@@ -215,7 +215,7 @@ export function RegisterPage() {
             <p className="text-muted-foreground">
               Sudah punya akun?{' '}
               <Link to="/login" className="text-primary hover:underline font-medium">
-                Login di sini
+                Masuk di sini
               </Link>
             </p>
           </div>

@@ -20,14 +20,18 @@ class ReportController extends Controller
     public function bookings(Request $request)
     {
         $request->validate([
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'start_date' => 'required|date_format:Y-m-d',
+            'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
             'export' => 'nullable|in:json,pdf',
         ]);
 
         $startDate = $request->start_date;
         $endDate = $request->end_date;
         $generatedAt = now();
+        $reportStatuses = [
+            BookingPaymentStatusService::BOOKING_SELESAI,
+            BookingPaymentStatusService::BOOKING_DIBATALKAN,
+        ];
 
         $bookings = Booking::with(['court.sport', 'user', 'payment'])
             ->whereBetween('booking_date', [$startDate, $endDate])
@@ -37,6 +41,9 @@ class ReportController extends Controller
 
         $bookings = Booking::with(['court.sport', 'user', 'payment'])
             ->whereBetween('booking_date', [$startDate, $endDate])
+            ->whereIn('status', $reportStatuses)
+            ->orderBy('booking_date')
+            ->orderBy('start_time')
             ->get();
 
         $rows = $bookings->map(function ($booking, $index) {
@@ -66,8 +73,6 @@ class ReportController extends Controller
         });
 
         $statusSummary = [
-            'dibooking' => $bookings->where('status', 'dibooking')->count(),
-            'sedang_digunakan' => $bookings->where('status', 'sedang_digunakan')->count(),
             'selesai' => $bookings->where('status', 'selesai')->count(),
             'dibatalkan' => $bookings->where('status', 'dibatalkan')->count(),
         ];
@@ -100,7 +105,7 @@ class ReportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Laporan booking berhasil diambil',
+                'message' => 'Laporan reservasi berhasil diambil',
             'data' => [
                 'period' => [
                     'start_date' => $startDate,
@@ -132,7 +137,7 @@ class ReportController extends Controller
     ): Response {
         $pages = [];
         $currentPage = [
-            'REKAP BOOKING',
+            'REKAP RESERVASI',
             'Periode : '.$startDate.' s/d '.$endDate,
             'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
             '',
@@ -147,11 +152,11 @@ class ReportController extends Controller
             foreach ($rows as $row) {
                 $currentPage[] = $this->formatPdfRow($row);
 
-                if (count($currentPage) >= 45) {
+                if (count($currentPage) >= 44) {
                     $currentPage[] = $this->tableSeparator();
                     $pages[] = $currentPage;
                     $currentPage = [
-                        'REKAP BOOKING (lanjutan)',
+                        'REKAP RESERVASI (lanjutan)',
                         'Periode : '.$startDate.' s/d '.$endDate,
                         'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
                         '',
@@ -166,18 +171,16 @@ class ReportController extends Controller
         $currentPage[] = $this->tableSeparator();
         $currentPage[] = '';
         $currentPage[] = 'Ringkasan';
-        $currentPage[] = 'Dibooking : '.$statusSummary['dibooking'];
-        $currentPage[] = 'Sedang digunakan : '.$statusSummary['sedang_digunakan'];
         $currentPage[] = 'Selesai : '.$statusSummary['selesai'];
         $currentPage[] = 'Dibatalkan : '.$statusSummary['dibatalkan'];
-        $currentPage[] = 'Total harga booking : Rp '.number_format($totalBookingAmount, 0, ',', '.');
+        $currentPage[] = 'Total harga reservasi : Rp '.number_format($totalBookingAmount, 0, ',', '.');
         $currentPage[] = 'Total sudah dibayar : Rp '.number_format($totalPaidAmount, 0, ',', '.');
         $currentPage[] = 'Total belum dibayar : Rp '.number_format($totalRemainingAmount, 0, ',', '.');
         $currentPage[] = 'Total pendapatan terbayar : Rp '.number_format($totalRevenue, 0, ',', '.');
         $pages[] = $currentPage;
 
-        $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Booking');
-        $filename = 'rekap-booking-'.$startDate.'-sampai-'.$endDate.'.pdf';
+        $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Reservasi');
+        $filename = 'rekap-reservasi-'.$startDate.'-sampai-'.$endDate.'.pdf';
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -196,54 +199,113 @@ class ReportController extends Controller
 
     private function tableHeader(): string
     {
-        return sprintf(
-            '| %-3s | %-6s | %-10s | %-13s | %-13s | %-10s | %-8s | %-8s | %-10s | %-10s | %-10s | %-11s | %-10s |',
-            'No',
-            'ID Pay',
-            'Tanggal',
-            'Jam',
-            'Customer',
-            'Lapangan',
-            'Sport',
-            'Metode',
-            'Booking',
-            'Dibayar',
-            'Sisa',
-            'Status Bayar',
-            'Status'
-        );
+        return $this->formatPdfCells(array_column($this->tableColumns(), 'heading'));
     }
 
     private function tableSeparator(): string
     {
-        return '+-----+--------+------------+---------------+---------------+------------+----------+----------+------------+------------+------------+-------------+------------+';
+        $parts = array_map(
+            fn (array $column) => str_repeat('-', $column['width'] + 2),
+            $this->tableColumns()
+        );
+
+        return '+'.implode('+', $parts).'+';
     }
 
     private function formatPdfRow(array $row): string
     {
-        return sprintf(
-            '| %-3s | %-6s | %-10s | %-13s | %-13s | %-10s | %-8s | %-8s | %10s | %10s | %10s | %-11s | %-10s |',
-            $row['no'],
-            $this->fitText((string) $row['id_payment'], 6),
-            $this->fitText($row['booking_date'], 10),
-            $this->fitText($row['time_slot'], 13),
-            $this->fitText($row['customer_name'], 13),
-            $this->fitText($row['court_name'], 10),
-            $this->fitText($row['sport_name'], 8),
-            $this->fitText($row['payment_method'], 8),
-            number_format($row['total_booking_amount'], 0, ',', '.'),
-            number_format($row['paid_amount'], 0, ',', '.'),
-            number_format($row['remaining_amount'], 0, ',', '.'),
-            $this->fitText($row['payment_status'], 11),
-            $this->fitText($row['status'], 10)
+        return $this->formatPdfCells(
+            [
+                $row['no'],
+                $row['booking_date'],
+                $row['time_slot'],
+                $row['customer_name'],
+                $row['court_name'],
+                $row['sport_name'],
+                $this->paymentMethodLabel($row['payment_method']),
+                number_format($row['total_booking_amount'], 0, ',', '.'),
+                number_format($row['paid_amount'], 0, ',', '.'),
+                number_format($row['remaining_amount'], 0, ',', '.'),
+                $this->paymentStatusLabel($row['payment_status']),
+                $this->bookingStatusLabel($row['status']),
+            ],
+            ['total_booking_amount', 'paid_amount', 'remaining_amount']
         );
+    }
+
+    private function formatPdfCells(array $values, array $rightAlignedKeys = []): string
+    {
+        $segments = [];
+
+        foreach ($this->tableColumns() as $index => $column) {
+            $value = $this->fitText((string) ($values[$index] ?? ''), $column['width']);
+            $shouldAlignRight = in_array($column['key'], $rightAlignedKeys, true) || ($column['align'] ?? 'left') === 'right';
+
+            $segments[] = ' '.str_pad(
+                $value,
+                $column['width'],
+                ' ',
+                $shouldAlignRight ? STR_PAD_LEFT : STR_PAD_RIGHT
+            ).' ';
+        }
+
+        return '|'.implode('|', $segments).'|';
+    }
+
+    private function tableColumns(): array
+    {
+        return [
+            ['key' => 'no', 'heading' => 'No', 'width' => 3],
+            ['key' => 'booking_date', 'heading' => 'Tanggal', 'width' => 10],
+            ['key' => 'time_slot', 'heading' => 'Jam', 'width' => 13],
+            ['key' => 'customer_name', 'heading' => 'Pelanggan', 'width' => 12],
+            ['key' => 'court_name', 'heading' => 'Lapangan', 'width' => 10],
+            ['key' => 'sport_name', 'heading' => 'Olahraga', 'width' => 9],
+            ['key' => 'payment_method', 'heading' => 'Metode', 'width' => 8],
+            ['key' => 'total_booking_amount', 'heading' => 'Total', 'width' => 10, 'align' => 'right'],
+            ['key' => 'paid_amount', 'heading' => 'Dibayar', 'width' => 10, 'align' => 'right'],
+            ['key' => 'remaining_amount', 'heading' => 'Sisa', 'width' => 10, 'align' => 'right'],
+            ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'width' => 18],
+            ['key' => 'status', 'heading' => 'Status Reservasi', 'width' => 16],
+        ];
+    }
+
+    private function paymentMethodLabel(?string $method): string
+    {
+        return match ($method) {
+            'cash' => 'Tunai',
+            'transfer' => 'Transfer',
+            default => $method ?: '-',
+        };
+    }
+
+    private function paymentStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'menunggu' => 'Menunggu',
+            'pembayaran_awal' => 'Pembayaran Awal',
+            'verifikasi_pembayaran_sisa' => 'Verif. Bayar Sisa',
+            'lunas' => 'Lunas',
+            default => $status ? ucwords(str_replace('_', ' ', $status)) : '-',
+        };
+    }
+
+    private function bookingStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'dibooking' => 'Dibooking',
+            'sedang_digunakan' => 'Sedang Digunakan',
+            'selesai' => 'Selesai',
+            'dibatalkan' => 'Dibatalkan',
+            default => $status ? ucwords(str_replace('_', ' ', $status)) : '-',
+        };
     }
 
     private function formatPdfEmptyRow(string $message): string
     {
         return sprintf(
-            '| %-139s |',
-            $this->fitText($message, 139)
+            '| %-'.(strlen($this->tableSeparator()) - 4).'s |',
+            $this->fitText($message, strlen($this->tableSeparator()) - 4)
         );
     }
 }

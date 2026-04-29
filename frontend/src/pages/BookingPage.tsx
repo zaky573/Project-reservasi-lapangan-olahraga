@@ -35,8 +35,8 @@ export function BookingPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground mb-4">Data booking tidak lengkap</p>
-            <Button onClick={() => navigate('/sports')}>Kembali ke Daftar Sport</Button>
+            <p className="text-muted-foreground mb-4">Data reservasi tidak lengkap</p>
+            <Button onClick={() => navigate('/sports')}>Kembali ke Daftar Olahraga</Button>
           </CardContent>
         </Card>
       </div>
@@ -91,7 +91,7 @@ export function BookingPage() {
       navigate('/booking-success', { state: result });
     } catch (error: any) {
       setErrors({
-        submit: error?.message || 'Booking gagal diproses. Pastikan jadwal masih tersedia.',
+        submit: error?.message || 'Reservasi gagal diproses. Pastikan jadwal masih tersedia.',
       });
       setLoading(false);
     }
@@ -100,17 +100,17 @@ export function BookingPage() {
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Form Booking</h1>
+        <h1 className="text-3xl font-bold text-foreground mb-8">Form Reservasi</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <h2 className="text-xl font-semibold text-foreground">Detail Booking</h2>
+                <h2 className="text-xl font-semibold text-foreground">Detail Reservasi</h2>
               </CardHeader>
               <CardContent>
                 <div className="mb-6 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3">
-                  <p className="text-sm font-medium text-foreground">Durasi booking bisa ditambah per jam.</p>
+                  <p className="text-sm font-medium text-foreground">Durasi reservasi bisa ditambah per jam.</p>
                   <p className="text-sm text-muted-foreground">
                     Slot tambahan mengikuti pilihan di halaman jadwal dan dihitung otomatis ke total pembayaran.
                   </p>
@@ -186,7 +186,7 @@ export function BookingPage() {
                         }`}
                       >
                         <Banknote className="w-8 h-8 mx-auto mb-2 text-primary" />
-                        <p className="font-medium text-foreground">Cash</p>
+                        <p className="font-medium text-foreground">Tunai</p>
                         <p className="text-xs text-muted-foreground">Bayar DP 25% sekarang, sisanya dibayar di tempat</p>
                       </button>
                       <button
@@ -200,7 +200,7 @@ export function BookingPage() {
                       >
                         <CreditCard className="w-8 h-8 mx-auto mb-2 text-primary" />
                         <p className="font-medium text-foreground">Transfer</p>
-                        <p className="text-xs text-muted-foreground">Wajib transfer 100% sesuai total booking</p>
+                        <p className="text-xs text-muted-foreground">Wajib transfer 100% sesuai total reservasi</p>
                       </button>
                     </div>
                   </div>
@@ -212,8 +212,8 @@ export function BookingPage() {
                     <div className="p-4 border-2 border-dashed border-border rounded-lg bg-muted/20">
                       <p className="text-sm font-medium text-foreground mb-1">
                         {paymentMethod === 'cash'
-                          ? 'Metode cash tetap wajib membayar DP 25% terlebih dahulu.'
-                          : 'Metode transfer wajib membayar 100% dari total booking.'}
+                          ? 'Metode tunai tetap wajib membayar DP 25% terlebih dahulu.'
+                          : 'Metode transfer wajib membayar 100% dari total reservasi.'}
                       </p>
                       <p className="text-sm text-muted-foreground mb-2">
                         Transfer ke: {BANK_ACCOUNT_INFO}
@@ -279,7 +279,7 @@ export function BookingPage() {
                     className="w-full"
                     disabled={loading}
                   >
-                    {loading ? 'Memproses...' : 'Konfirmasi Booking'}
+                    {loading ? 'Memproses...' : 'Konfirmasi Reservasi'}
                   </Button>
                   {errors.submit && (
                     <p className="text-destructive text-sm">{errors.submit}</p>

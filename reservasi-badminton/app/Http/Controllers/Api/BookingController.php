@@ -20,7 +20,7 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'court_id' => 'required|exists:courts,id',
-            'booking_date' => 'required|date',
+            'booking_date' => 'required|date_format:Y-m-d',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'customer_name' => 'required|string|max:255',
@@ -84,23 +84,29 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // 🚫 Tidak boleh booking di waktu yang sudah lewat (khusus hari ini)
-        $bookingDate = Carbon::parse($validated['booking_date'])->toDateString();
-        $today = Carbon::now()->toDateString();
+        // Tidak boleh booking di tanggal atau jam yang sudah lewat.
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $bookingDate = Carbon::createFromFormat('Y-m-d', $validated['booking_date'], $timezone)->startOfDay();
+        $today = Carbon::now($timezone)->startOfDay();
 
-        if ($bookingDate === $today) {
-            $now = Carbon::now();
+        if ($bookingDate->lt($today)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Tidak bisa booking di tanggal yang sudah lewat',
+            ], 422);
+        }
 
-            // samakan format ke jam:menit
-            $currentTime = Carbon::createFromFormat('H:i', $now->format('H:i'));
+        $bookingStartAt = Carbon::createFromFormat(
+            'Y-m-d H:i',
+            $validated['booking_date'].' '.$validated['start_time'],
+            $timezone
+        );
 
-            // jika start_time <= sekarang → tolak
-            if ($start->lte($currentTime)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Tidak bisa booking di jam yang sudah lewat atau sedang berlangsung',
-                ], 422);
-            }
+        if ($bookingStartAt->lte(Carbon::now($timezone))) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Tidak bisa booking di jam yang sudah lewat atau sedang berlangsung',
+            ], 422);
         }
 
         $totalHours = $durationInMinutes / 60;

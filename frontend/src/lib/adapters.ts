@@ -40,7 +40,7 @@ function titleCase(value: string) {
 }
 
 function normalizeName(value: unknown) {
-  const raw = asString(value, 'Sport');
+  const raw = asString(value, 'Olahraga');
   return titleCase(raw);
 }
 
@@ -78,7 +78,7 @@ export function mapSport(item: any): Sport {
 }
 
 export function mapCourt(item: any): Court {
-  const sportName = normalizeName(item?.sport?.name || item?.sport_name || 'Sport');
+  const sportName = normalizeName(item?.sport?.name || item?.sport_name || 'Olahraga');
   const meta = sportMeta(sportName);
 
   return {

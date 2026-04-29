@@ -26,7 +26,7 @@ export function Navbar() {
                 <Link to={currentUser.role === 'user' ? '/sports' : '/dashboard'}>
                   <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
                     <Home className="w-4 h-4 mr-2" />
-                    {currentUser.role === 'user' ? 'Booking' : 'Dashboard'}
+                    {currentUser.role === 'user' ? 'Reservasi' : 'Dasbor'}
                   </Button>
                 </Link>
                 {currentUser.role === 'user' && (
@@ -48,19 +48,19 @@ export function Navbar() {
                   className="text-primary-foreground hover:bg-destructive"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
-                  Logout
+                  Keluar
                 </Button>
               </>
             ) : (
               <>
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                    Login
+                    Masuk
                   </Button>
                 </Link>
                 <Link to="/register">
                   <Button variant="secondary" size="sm">
-                    Register
+                    Daftar
                   </Button>
                 </Link>
               </>

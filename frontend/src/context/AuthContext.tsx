@@ -72,6 +72,7 @@ interface AuthContextType {
   deleteCourt: (courtId: string) => void;
   addUser: (user: User) => void;
   deleteUser: (userId: string) => void;
+  resetAdminPassword: (userId: string, password?: string) => Promise<{ success: boolean; message: string; password?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -168,21 +169,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPayments(mappedPayments);
   };
 
-  const loadAdminData = async () => {
-    const [bookingsResponse, paymentsResponse] = await Promise.all([
+  const loadAdminData = async (user = currentUser) => {
+    const [bookingsResponse, paymentsResponse, adminsResponse] = await Promise.all([
       apiClient.get<ApiResponse<any[]>>('/bookings'),
       apiClient.get<ApiResponse<any[]>>('/payments'),
+      user?.role === 'super_admin'
+        ? apiClient.get<ApiResponse<any[]>>('/admins')
+        : Promise.resolve(null),
     ]);
 
     const apiBookings = bookingsResponse.data;
     const apiPayments = paymentsResponse.data;
+    const apiAdmins = adminsResponse?.data || [];
     const mappedBookings = apiBookings.map(mapBooking);
     const mappedPayments = apiPayments.map(mapPayment);
     const relatedUsers = extractBookingUsers(apiBookings, apiPayments);
+    const adminUsers = apiAdmins.map(mapUser);
 
     setBookings(mappedBookings);
     setPayments(mappedPayments);
-    setUsers((currentUsers) => uniqueById([...(currentUser ? [currentUser] : []), ...currentUsers, ...relatedUsers]));
+    setUsers((currentUsers) => uniqueById([...(user ? [user] : []), ...currentUsers, ...relatedUsers, ...adminUsers]));
   };
 
   const loadProtectedData = async (user = currentUser) => {
@@ -193,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await loadAdminData();
+    await loadAdminData(user);
   };
 
   const refreshData = async () => {
@@ -511,6 +517,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsers((currentUsers) => currentUsers.filter((user) => user.id !== userId));
   };
 
+  const resetAdminPassword = async (userId: string, password?: string) => {
+    try {
+      const response = await apiClient.put<ApiResponse<{ user: any; temporary_password: string }>>(
+        `/admins/${userId}/reset-password`,
+        password ? { password } : {}
+      );
+      const admin = mapUser(response.data.user);
+
+      setUsers((currentUsers) => replaceById(currentUsers, admin));
+
+      return {
+        success: true,
+        message: response.message || 'Password admin berhasil direset.',
+        password: response.data.temporary_password,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: apiMessage(error, 'Gagal mereset password admin.'),
+      };
+    }
+  };
+
   const fetchSchedule = async (courtId: string, date: string) => {
     const response = await apiClient.get<ApiResponse<{ slots: any[] }>>('/schedules', {
       court_id: courtId,
@@ -612,6 +641,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deleteCourt,
         addUser,
         deleteUser,
+        resetAdminPassword,
       }}
     >
       {children}

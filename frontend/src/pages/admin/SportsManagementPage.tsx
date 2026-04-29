@@ -45,7 +45,7 @@ export function SportsManagementPage() {
   };
 
   const handleDelete = (sportId: string) => {
-    if (confirm('Yakin ingin menghapus sport ini?')) {
+    if (confirm('Yakin ingin menghapus olahraga ini?')) {
       deleteSport(sportId);
     }
   };
@@ -54,7 +54,7 @@ export function SportsManagementPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Sports Management</h1>
+          <h1 className="text-3xl font-bold text-foreground">Manajemen Olahraga</h1>
           <p className="text-muted-foreground mt-2">Kelola jenis olahraga</p>
         </div>
         <Button
@@ -66,7 +66,7 @@ export function SportsManagementPage() {
           }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Tambah Sport
+          Tambah Olahraga
         </Button>
       </div>
 
@@ -77,7 +77,7 @@ export function SportsManagementPage() {
               <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Cari sport..."
+                placeholder="Cari olahraga..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -90,7 +90,7 @@ export function SportsManagementPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Icon</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ikon</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Kode</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nama</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Deskripsi</th>
@@ -130,7 +130,7 @@ export function SportsManagementPage() {
             </table>
             {filteredSports.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
-                Tidak ada sport ditemukan
+                Tidak ada olahraga ditemukan
               </div>
             )}
           </div>
@@ -140,17 +140,17 @@ export function SportsManagementPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingSport ? 'Edit Sport' : 'Tambah Sport'}
+        title={editingSport ? 'Edit Olahraga' : 'Tambah Olahraga'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Nama Sport"
+            label="Nama Olahraga"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
           />
           <Input
-            label="Kode Sport"
+            label="Kode Olahraga"
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) })}
             placeholder="Contoh: BDM"
@@ -163,7 +163,7 @@ export function SportsManagementPage() {
             required
           />
           <Input
-            label="Icon (Emoji)"
+            label="Ikon"
             value={formData.icon}
             onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
             placeholder="🏸"
@@ -174,7 +174,7 @@ export function SportsManagementPage() {
               Batal
             </Button>
             <Button type="submit" variant="primary">
-              {editingSport ? 'Update' : 'Tambah'}
+              {editingSport ? 'Perbarui' : 'Tambah'}
             </Button>
           </div>
         </form>

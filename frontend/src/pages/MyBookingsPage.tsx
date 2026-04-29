@@ -58,7 +58,7 @@ export function MyBookingsPage() {
 
     if (payment.status === 'pembayaran_awal' || payment.status === 'verifikasi_pembayaran_sisa') {
       if (payment.settlement_method === 'cash_at_venue') {
-        return `Anda memilih membayar sisa ${formatCurrency(remainingAmount)} secara cash saat datang ke lapangan.`;
+        return `Anda memilih membayar sisa ${formatCurrency(remainingAmount)} secara tunai saat datang ke lapangan.`;
       }
 
       return `Admin mencatat uang masuk ${formatCurrency(payment.amount)}. Sisa pembayaran ${formatCurrency(remainingAmount)} dapat ditransfer ulang atau dibayar langsung saat datang.`;
@@ -109,9 +109,9 @@ export function MyBookingsPage() {
 
   const handlePayAtVenue = async (payment: Payment, remainingAmount: number) => {
     try {
-      await submitPaymentDetail(payment.booking_id, 'cash', remainingAmount, null, 'Pembayaran cash saat datang ke lapangan.');
+      await submitPaymentDetail(payment.booking_id, 'cash', remainingAmount, null, 'Pembayaran tunai saat datang ke lapangan.');
       setPaymentError(payment.id, '');
-      setPaymentMessage(payment.id, 'Pilihan bayar cash saat datang sudah dicatat.');
+      setPaymentMessage(payment.id, 'Pilihan bayar tunai saat datang sudah dicatat.');
     } catch (error: any) {
       setPaymentError(payment.id, error?.message || 'Gagal mencatat pembayaran cash.');
     }
@@ -121,9 +121,9 @@ export function MyBookingsPage() {
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Riwayat Booking</h1>
+          <h1 className="text-3xl font-bold text-foreground">Riwayat Reservasi</h1>
           <p className="text-muted-foreground mt-2">
-            Lihat semua booking Anda di sini
+            Lihat semua reservasi Anda di sini
           </p>
         </div>
 
@@ -131,9 +131,9 @@ export function MyBookingsPage() {
           <Card>
             <CardContent className="text-center py-12">
               <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">Belum ada booking</p>
+              <p className="text-muted-foreground mb-2">Belum ada reservasi</p>
               <p className="text-sm text-muted-foreground">
-                Mulai booking lapangan favorit Anda sekarang
+                Mulai reservasi lapangan favorit Anda sekarang
               </p>
             </CardContent>
           </Card>
@@ -162,10 +162,10 @@ export function MyBookingsPage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="font-semibold text-lg text-foreground">
-                            {court?.name || 'Unknown Court'}
+                            {court?.name || 'Lapangan tidak diketahui'}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Booking ID: #{booking.id}
+                            ID Reservasi: #{booking.id}
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-2">
@@ -202,7 +202,7 @@ export function MyBookingsPage() {
                           <p className="text-muted-foreground">Metode Pembayaran</p>
                           <p className="font-medium text-foreground">
                             {payment?.method === 'cash'
-                              ? 'Cash + DP Transfer'
+                              ? 'Tunai + DP Transfer'
                               : payment?.method === 'transfer'
                                 ? 'Transfer'
                                 : '-'}
@@ -242,7 +242,7 @@ export function MyBookingsPage() {
                           <div className="mb-4">
                             <p className="font-semibold text-foreground">Bayar Sisa Pembayaran</p>
                             <p className="text-sm text-muted-foreground">
-                              Pilih transfer sisa dengan upload bukti baru, atau catat bahwa sisa akan dibayar cash saat datang.
+                              Pilih transfer sisa dengan upload bukti baru, atau catat bahwa sisa akan dibayar tunai saat datang.
                             </p>
                           </div>
 
@@ -292,7 +292,7 @@ export function MyBookingsPage() {
                                 onClick={() => handlePayAtVenue(payment, remainingAmount)}
                               >
                                 <Banknote className="w-4 h-4 mr-2" />
-                                Bayar Cash Saat Datang
+                                Bayar Tunai Saat Datang
                               </Button>
                             </div>
                           </div>

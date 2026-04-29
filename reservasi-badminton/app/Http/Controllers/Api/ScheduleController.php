@@ -13,12 +13,16 @@ class ScheduleController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'date' => 'required|date',
+            'date' => 'required|date_format:Y-m-d',
             'court_id' => 'required|exists:courts,id',
         ]);
 
         $date = $request->date;
         $court = Court::with('sport')->find($request->court_id);
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $now = Carbon::now($timezone);
+        $requestedDate = Carbon::createFromFormat('Y-m-d', $date, $timezone)->toDateString();
+        $today = $now->toDateString();
 
         if (! $court) {
             return response()->json([
@@ -41,6 +45,11 @@ class ScheduleController extends Controller
             $slotEnd = Carbon::createFromFormat('H:i', sprintf('%02d:00', $hour + 1));
 
             $status = 'available';
+            $isExpired = $requestedDate < $today
+                || (
+                    $requestedDate === $today
+                    && Carbon::createFromFormat('Y-m-d H:i', $date.' '.$slotStart->format('H:i'), $timezone)->lte($now)
+                );
 
             if ($court->status === 'maintenance') {
                 $status = 'maintenance';
@@ -53,6 +62,10 @@ class ScheduleController extends Controller
                         $status = 'booked';
                         break;
                     }
+                }
+
+                if ($status === 'available' && $isExpired) {
+                    $status = 'expired';
                 }
             }
 

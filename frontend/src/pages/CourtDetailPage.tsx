@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, formatDateInputValue } from '../lib/utils';
 import { TimeSlot } from '../data/mockData';
 import { Calendar, Clock, MapPin, Info, Plus, Minus } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export function CourtDetailPage() {
   const { courts, sports, fetchSchedule } = useAuth();
 
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    formatDateInputValue(new Date())
   );
   const [selectedSlots, setSelectedSlots] = useState<TimeSlot[]>([]);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -80,8 +80,23 @@ export function CourtDetailPage() {
         return 'bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-60';
       case 'maintenance':
         return 'bg-warning/20 text-warning-foreground border-warning cursor-not-allowed opacity-60';
+      case 'expired':
+        return 'bg-muted/60 text-muted-foreground border-muted cursor-not-allowed opacity-60';
       default:
         return '';
+    }
+  };
+
+  const getCourtStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Tersedia';
+      case 'inactive':
+        return 'Tidak Aktif';
+      case 'maintenance':
+        return 'Pemeliharaan';
+      default:
+        return status;
     }
   };
 
@@ -121,13 +136,13 @@ export function CourtDetailPage() {
   };
 
   const getMinDate = () => {
-    return new Date().toISOString().split('T')[0];
+    return formatDateInputValue(new Date());
   };
 
   const getMaxDate = () => {
     const date = new Date();
     date.setDate(date.getDate() + 30);
-    return date.toISOString().split('T')[0];
+    return formatDateInputValue(date);
   };
 
   return (
@@ -148,7 +163,7 @@ export function CourtDetailPage() {
                     <p className="text-muted-foreground">{court.code}</p>
                   </div>
                   <Badge variant="success">
-                    {court.status === 'active' ? 'Tersedia' : court.status}
+                    {getCourtStatusLabel(court.status)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -196,7 +211,7 @@ export function CourtDetailPage() {
                     Pilih jam mulai terlebih dulu, lalu gunakan tombol tambah untuk menambah durasi.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Customer bisa booking lebih dari satu jam, tetapi penambahan waktu hanya mengikuti slot berikutnya yang masih tersedia.
+                    Pelanggan bisa reservasi lebih dari satu jam, tetapi penambahan waktu hanya mengikuti slot berikutnya yang masih tersedia.
                   </p>
                 </div>
 
@@ -254,11 +269,15 @@ export function CourtDetailPage() {
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="w-4 h-4 bg-muted border border-muted rounded"></div>
-                          <span className="text-muted-foreground">Sudah dibooking</span>
+                          <span className="text-muted-foreground">Sudah direservasi</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-muted/60 border border-muted rounded"></div>
+                          <span className="text-muted-foreground">Jam sudah lewat</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="w-4 h-4 bg-warning/20 border border-warning rounded"></div>
-                          <span className="text-muted-foreground">Maintenance</span>
+                          <span className="text-muted-foreground">Pemeliharaan</span>
                         </div>
                       </div>
                     </div>
@@ -291,6 +310,9 @@ export function CourtDetailPage() {
                     >
                       <div>{slot.start_time}</div>
                       <div className="text-xs opacity-75">{slot.end_time}</div>
+                      {slot.status === 'expired' && (
+                        <div className="mt-1 text-[10px] leading-none">Lewat</div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -301,7 +323,7 @@ export function CourtDetailPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
               <CardHeader>
-                <h2 className="text-xl font-semibold text-foreground">Ringkasan Booking</h2>
+                <h2 className="text-xl font-semibold text-foreground">Ringkasan Reservasi</h2>
               </CardHeader>
               <CardContent>
                 {selectedSlots.length > 0 ? (
@@ -343,14 +365,14 @@ export function CourtDetailPage() {
                       className="w-full"
                       onClick={handleBooking}
                     >
-                      Lanjut ke Booking
+                      Lanjut ke Reservasi
                     </Button>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                     <p className="text-muted-foreground text-sm">
-                      Pilih jam mulai, lalu tambah durasi jika ingin booking lebih dari satu jam
+                      Pilih jam mulai, lalu tambah durasi jika ingin reservasi lebih dari satu jam
                     </p>
                   </div>
                 )}

@@ -9,7 +9,7 @@ export function DashboardPage() {
 
   const stats = [
     {
-      label: 'Total Sports',
+      label: 'Total Olahraga',
       value: sports.length,
       icon: Trophy,
       color: 'text-primary',
@@ -23,14 +23,14 @@ export function DashboardPage() {
       bg: 'bg-secondary/10',
     },
     {
-      label: 'Total Booking',
+      label: 'Total Reservasi',
       value: bookings.length,
       icon: Calendar,
       color: 'text-accent',
       bg: 'bg-accent/10',
     },
     {
-      label: 'Total Payment',
+      label: 'Total Pembayaran',
       value: payments.length,
       icon: CreditCard,
       color: 'text-info',
@@ -59,7 +59,7 @@ export function DashboardPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-foreground">Dasbor</h1>
         <p className="text-muted-foreground mt-2">
           Selamat datang, {currentUser?.name}
         </p>
@@ -120,7 +120,7 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold text-foreground">Booking per Sport</h2>
+          <h2 className="text-xl font-semibold text-foreground">Reservasi per Olahraga</h2>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>

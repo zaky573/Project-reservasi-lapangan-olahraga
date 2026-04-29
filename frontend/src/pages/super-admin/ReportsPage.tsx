@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { apiClient } from '../../lib/api';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, formatDateInputValue } from '../../lib/utils';
 import { Calendar, Download, TrendingUp, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -41,8 +41,8 @@ type ApiResponse<T> = {
 };
 
 const today = new Date();
-const defaultStartDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-const defaultEndDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+const defaultStartDate = formatDateInputValue(new Date(today.getFullYear(), today.getMonth(), 1));
+const defaultEndDate = formatDateInputValue(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -59,6 +59,12 @@ function statusLabel(status: string) {
   return labels[status] || status || '-';
 }
 
+function paymentMethodLabel(method: string) {
+  if (method === 'cash') return 'Tunai';
+  if (method === 'transfer') return 'Transfer';
+  return method || '-';
+}
+
 export function ReportsPage() {
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
@@ -66,8 +72,32 @@ export function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
+  const dateRangeInvalid = Boolean(startDate && endDate && endDate < startDate);
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+
+    if (endDate && value && endDate < value) {
+      setEndDate(value);
+    }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    if (startDate && value < startDate) {
+      setError('Tanggal sampai tidak boleh lebih awal dari tanggal dari.');
+      return;
+    }
+
+    setEndDate(value);
+  };
 
   const loadReport = async () => {
+    if (dateRangeInvalid) {
+      setReport(null);
+      setError('Tanggal sampai tidak boleh lebih awal dari tanggal dari.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -87,10 +117,17 @@ export function ReportsPage() {
   };
 
   useEffect(() => {
-    loadReport();
+    if (!dateRangeInvalid) {
+      loadReport();
+    }
   }, [startDate, endDate]);
 
   const downloadPdf = async () => {
+    if (dateRangeInvalid) {
+      setError('Tanggal sampai tidak boleh lebih awal dari tanggal dari.');
+      return;
+    }
+
     setDownloading(true);
     setError('');
 
@@ -103,7 +140,7 @@ export function ReportsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `rekap-booking-${startDate}-sampai-${endDate}.pdf`;
+      link.download = `rekap-reservasi-${startDate}-sampai-${endDate}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -145,8 +182,8 @@ export function ReportsPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Reports & Analytics</h1>
-        <p className="text-muted-foreground mt-2">Preview rekap booking sebelum diunduh sebagai PDF</p>
+        <h1 className="text-3xl font-bold text-foreground">Rekap Data</h1>
+        <p className="text-muted-foreground mt-2">Pratinjau rekap reservasi selesai dan dibatalkan sebelum diunduh sebagai PDF</p>
       </div>
 
       <Card className="mb-8">
@@ -164,7 +201,7 @@ export function ReportsPage() {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
                   className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -173,7 +210,8 @@ export function ReportsPage() {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  min={startDate || undefined}
                   className="px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -182,9 +220,9 @@ export function ReportsPage() {
               <Button variant="outline" onClick={loadReport} disabled={loading}>
                 {loading ? 'Memuat...' : 'Tampilkan Data'}
               </Button>
-              <Button variant="primary" onClick={downloadPdf} disabled={!report || downloading}>
+              <Button variant="primary" onClick={downloadPdf} disabled={!report || downloading || dateRangeInvalid}>
                 <Download className="w-4 h-4 mr-2" />
-                {downloading ? 'Membuat PDF...' : 'Download PDF'}
+                {downloading ? 'Membuat PDF...' : 'Unduh PDF'}
               </Button>
             </div>
           </div>
@@ -213,7 +251,7 @@ export function ReportsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Booking</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Reservasi</p>
                 <p className="text-2xl font-bold text-foreground">{report?.total_bookings || 0}</p>
               </div>
               <div className="bg-secondary/10 p-3 rounded-lg">
@@ -240,7 +278,7 @@ export function ReportsPage() {
 
       <Card className="mb-8">
         <CardHeader>
-          <h2 className="text-xl font-semibold text-foreground">Preview Data Rekap</h2>
+          <h2 className="text-xl font-semibold text-foreground">Pratinjau Data Rekap</h2>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -249,13 +287,15 @@ export function ReportsPage() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">No</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tanggal</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Customer</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Pelanggan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Lapangan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jam</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Booking</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Total Reservasi</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Terbayar</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Sisa</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Metode</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status Pembayaran</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status Reservasi</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,6 +309,8 @@ export function ReportsPage() {
                     <td className="py-3 px-4 text-primary font-medium">{formatCurrency(row.total_booking_amount)}</td>
                     <td className="py-3 px-4 text-primary font-medium">{formatCurrency(row.paid_amount)}</td>
                     <td className="py-3 px-4">{formatCurrency(row.remaining_amount)}</td>
+                    <td className="py-3 px-4">{paymentMethodLabel(row.payment_method)}</td>
+                    <td className="py-3 px-4">{statusLabel(row.payment_status)}</td>
                     <td className="py-3 px-4">{statusLabel(row.status)}</td>
                   </tr>
                 ))}
@@ -303,7 +345,7 @@ export function ReportsPage() {
 
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-foreground">Booking per Sport</h2>
+            <h2 className="text-xl font-semibold text-foreground">Reservasi per Olahraga</h2>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -312,7 +354,7 @@ export function ReportsPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="bookings" fill="#85C79A" name="Bookings" />
+                <Bar dataKey="bookings" fill="#85C79A" name="Reservasi" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
