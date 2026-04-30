@@ -50,10 +50,45 @@ export function LandingPage() {
     },
   ];
 
+  const courtShowcase = [
+    {
+      name: 'Lapangan Futsal',
+      image: '/images/hero-background.jpg',
+      label: 'Favorit',
+      price: 'Mulai Rp150.000/jam',
+      courtCount: '2 lapangan aktif',
+      description: 'Rumput sintetis premium dengan area bermain luas untuk tim Anda.',
+    },
+    {
+      name: 'Lapangan Badminton',
+      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop',
+      label: 'Indoor',
+      price: 'Mulai Rp80.000/jam',
+      courtCount: '3 lapangan tersedia',
+      description: 'Lapangan nyaman dengan pencahayaan terang untuk latihan maupun pertandingan.',
+    },
+    {
+      name: 'Lapangan Basket',
+      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop',
+      label: 'Reguler',
+      price: 'Mulai Rp120.000/jam',
+      courtCount: '1 lapangan aktif',
+      description: 'Area basket terawat dengan ring standar dan ruang gerak yang lega.',
+    },
+    {
+      name: 'Lapangan Tennis',
+      image: '/images/Tennis.jpg',
+      label: 'Premium',
+      price: 'Mulai Rp120.000/jam',
+      courtCount: 'Area raket',
+      description: 'Lapangan raket indoor untuk bermain santai atau sesi latihan rutin.',
+    },
+  ];
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen scroll-smooth md:h-screen md:overflow-y-auto md:snap-y md:snap-mandatory">
       <section
-        className="relative text-white py-24 bg-cover bg-center"
+        className="relative flex min-h-screen items-center text-white bg-cover bg-center py-20 md:snap-start"
         style={{
           backgroundImage: "url('/images/PREAU.jpg')",
           backgroundPosition: 'center',
@@ -62,11 +97,11 @@ export function LandingPage() {
         }}
       >
         <div className="absolute inset-0 bg-black/45" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+        <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <h1 className="mb-6 text-4xl font-bold sm:text-5xl md:text-6xl">
             Selamat Datang di THE ARENA
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-white/90">
+          <p className="mb-8 text-lg text-white/90 sm:text-xl md:text-2xl">
             Platform reservasi lapangan olahraga terlengkap dan termudah.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -84,9 +119,55 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+      <section className="flex min-h-screen items-center bg-muted/30 py-16 md:snap-start">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <h2 className="text-3xl font-bold text-foreground">Lapangan yang Tersedia</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+              Sebelum login, Anda bisa melihat pilihan lapangan yang dapat dipesan di THE ARENA.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {courtShowcase.map((court) => (
+              <Card key={court.name} className="group h-full transition-shadow hover:shadow-lg">
+                <div className="relative h-44 overflow-hidden">
+                  <img
+                    src={court.image}
+                    alt={court.name}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm">
+                    {court.label}
+                  </span>
+                </div>
+                <CardContent className="p-5">
+                  <h3 className="text-lg font-semibold text-foreground">{court.name}</h3>
+                  <p className="mt-2 min-h-12 text-sm leading-relaxed text-muted-foreground">
+                    {court.description}
+                  </p>
+                  <div className="mt-5 border-t border-border pt-4">
+                    <p className="text-sm font-semibold text-primary">{court.price}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{court.courtCount}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <Link to="/register">
+              <Button variant="primary" size="lg">
+                Lihat Jadwal dan Booking
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex min-h-screen items-center bg-background py-16 md:snap-start">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-foreground">Fasilitas Unggulan Kami</h2>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
               Rasakan kenyamanan reservasi lapangan dengan fasilitas lengkap dan area yang terawat.
@@ -111,8 +192,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="flex min-h-screen items-center bg-muted/30 py-16 md:snap-start">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12 text-foreground">
             Kenapa Pilih THE ARENA?
           </h2>
@@ -135,8 +216,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="py-16 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="flex min-h-screen items-center bg-background py-16 md:snap-start">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold mb-6 text-foreground">
@@ -173,8 +254,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <footer className="bg-gradient-to-br from-primary via-secondary to-accent text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <footer className="flex min-h-screen items-center bg-gradient-to-br from-primary via-secondary to-accent text-white md:snap-start">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             <div>
               <h3 className="text-2xl font-bold mb-3">THE ARENA</h3>

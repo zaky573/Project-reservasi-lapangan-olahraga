@@ -51,6 +51,7 @@ export function LoginPage() {
               type="email"
               label="Email"
               placeholder="user@thearena.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -59,6 +60,7 @@ export function LoginPage() {
               type="password"
               label="Password"
               placeholder="Masukkan password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

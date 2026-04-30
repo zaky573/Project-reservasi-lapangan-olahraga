@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { formatCurrency } from '../lib/utils';
+import { calculateDpAmount, DP_PER_HOUR, formatCurrency } from '../lib/utils';
 import { Court, Sport, TimeSlot, Booking, Payment, PaymentMethod } from '../data/mockData';
 import { Calendar, Clock, MapPin, CreditCard, Banknote, Upload, FileImage, X } from 'lucide-react';
 
@@ -48,7 +48,8 @@ export function BookingPage() {
   const bookingEndTime = bookingSlots[bookingSlots.length - 1].end_time;
   const bookingDuration = bookingSlots.length;
   const totalPrice = court.price_per_hour * bookingDuration;
-  const paymentAmount = paymentMethod === 'cash' ? Math.round(totalPrice * 0.25) : totalPrice;
+  const cashDpAmount = calculateDpAmount(bookingDuration);
+  const paymentAmount = paymentMethod === 'cash' ? cashDpAmount : totalPrice;
   const remainingCashPayment = Math.max(totalPrice - paymentAmount, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,7 +188,7 @@ export function BookingPage() {
                       >
                         <Banknote className="w-8 h-8 mx-auto mb-2 text-primary" />
                         <p className="font-medium text-foreground">Tunai</p>
-                        <p className="text-xs text-muted-foreground">Bayar DP 25% sekarang, sisanya dibayar di tempat</p>
+                        <p className="text-xs text-muted-foreground">Bayar DP per jam sekarang, sisanya di tempat</p>
                       </button>
                       <button
                         type="button"
@@ -212,7 +213,7 @@ export function BookingPage() {
                     <div className="p-4 border-2 border-dashed border-border rounded-lg bg-muted/20">
                       <p className="text-sm font-medium text-foreground mb-1">
                         {paymentMethod === 'cash'
-                          ? 'Metode tunai tetap wajib membayar DP 25% terlebih dahulu.'
+                          ? `Metode tunai wajib membayar DP ${formatCurrency(DP_PER_HOUR)} per jam terlebih dahulu.`
                           : 'Metode transfer wajib membayar 100% dari total reservasi.'}
                       </p>
                       <p className="text-sm text-muted-foreground mb-2">
@@ -220,7 +221,7 @@ export function BookingPage() {
                       </p>
                       <p className="text-sm text-muted-foreground mb-3">
                         {paymentMethod === 'cash'
-                          ? `Nominal DP yang harus ditransfer: ${formatCurrency(paymentAmount)}. Sisa pembayaran ${formatCurrency(remainingCashPayment)} dibayar saat datang ke lokasi.`
+                          ? `Nominal DP yang harus ditransfer: ${formatCurrency(DP_PER_HOUR)} x ${bookingDuration} jam = ${formatCurrency(paymentAmount)}. Sisa pembayaran ${formatCurrency(remainingCashPayment)} dibayar saat datang ke lokasi.`
                           : `Nominal transfer penuh yang harus dibayar: ${formatCurrency(paymentAmount)}.`}
                       </p>
                       <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-border bg-background px-4 py-6 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
@@ -308,7 +309,9 @@ export function BookingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      {paymentMethod === 'cash' ? 'DP Dibayar Sekarang' : 'Dibayar Sekarang'}
+                      {paymentMethod === 'cash'
+                        ? `DP (${formatCurrency(DP_PER_HOUR)} x ${bookingDuration} jam)`
+                        : 'Dibayar Sekarang'}
                     </span>
                     <span className="font-medium text-foreground">{formatCurrency(paymentAmount)}</span>
                   </div>

@@ -13,6 +13,26 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export const DP_PER_HOUR = 25000;
+
+export function calculateDpAmount(durationHours: number): number {
+  return DP_PER_HOUR * Math.max(durationHours, 1);
+}
+
+export function calculateTimeDurationHours(startTime?: string, endTime?: string): number {
+  if (!startTime || !endTime) return 1;
+
+  const [startHour = 0, startMinute = 0] = startTime.split(':').map(Number);
+  const [endHour = 0, endMinute = 0] = endTime.split(':').map(Number);
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+  const durationMinutes = endTotalMinutes - startTotalMinutes;
+
+  if (durationMinutes <= 0) return 1;
+
+  return Math.max(Math.ceil(durationMinutes / 60), 1);
+}
+
 export function formatDateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

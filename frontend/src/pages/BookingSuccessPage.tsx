@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { CheckCircle } from 'lucide-react';
 import { Booking, Payment } from '../data/mockData';
-import { formatCurrency, formatDateTime } from '../lib/utils';
+import { calculateDpAmount, calculateTimeDurationHours, DP_PER_HOUR, formatCurrency } from '../lib/utils';
 
 export function BookingSuccessPage() {
   const location = useLocation();
@@ -43,6 +43,11 @@ export function BookingSuccessPage() {
     }
   };
 
+  const bookingDuration = calculateTimeDurationHours(booking.start_time, booking.end_time);
+  const calculatedDpAmount = calculateDpAmount(bookingDuration);
+  const cashDpAmount = payment.method === 'cash' ? payment.amount || calculatedDpAmount : 0;
+  const remainingCashPayment = Math.max(booking.total_price - cashDpAmount, 0);
+
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,7 +60,7 @@ export function BookingSuccessPage() {
             <p className="text-muted-foreground mb-8">
               {payment.method === 'transfer'
                 ? 'Pembayaran transfer 100% Anda sedang diverifikasi. Cek status di halaman Riwayat Reservasi.'
-                : 'DP 25% Anda sedang diverifikasi. Setelah itu, sisa pembayaran tunai dibayar di tempat saat Anda tiba.'}
+                : `DP ${formatCurrency(cashDpAmount)} (${formatCurrency(DP_PER_HOUR)} x ${bookingDuration} jam) Anda sedang diverifikasi. Setelah itu, sisa pembayaran tunai dibayar di tempat saat Anda tiba.`}
             </p>
 
             <div className="bg-muted/30 rounded-lg p-6 text-left mb-6">
@@ -89,6 +94,10 @@ export function BookingSuccessPage() {
                     {booking.start_time} - {booking.end_time}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Durasi</span>
+                  <span className="font-medium text-foreground">{bookingDuration} jam</span>
+                </div>
                 <div className="flex justify-between pt-3 border-t border-border">
                   <span className="text-muted-foreground">Total Harga</span>
                   <span className="font-bold text-primary text-lg">
@@ -105,8 +114,16 @@ export function BookingSuccessPage() {
                   <span className="text-muted-foreground">
                     {payment.method === 'cash' ? 'Nominal DP' : 'Nominal Dibayar'}
                   </span>
-                  <span className="font-medium text-foreground">{formatCurrency(payment.amount)}</span>
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(payment.method === 'cash' ? cashDpAmount : payment.amount)}
+                  </span>
                 </div>
+                {payment.method === 'cash' && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sisa Bayar di Tempat</span>
+                    <span className="font-medium text-foreground">{formatCurrency(remainingCashPayment)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status Pembayaran</span>
                   {getPaymentStatusBadge(payment.status)}

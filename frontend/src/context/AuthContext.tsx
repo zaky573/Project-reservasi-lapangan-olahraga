@@ -1,5 +1,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import type { Booking, Court, Payment, PaymentMethod, Sport, TimeSlot, User } from '../data/mockData';
+import {
+  generateTimeSlots,
+  mockBookings,
+  mockCourts,
+  mockPayments,
+  mockSports,
+  mockUsers,
+  type Booking,
+  type Court,
+  type Payment,
+  type PaymentMethod,
+  type Sport,
+  type TimeSlot,
+  type User,
+} from '../data/mockData';
 import { apiClient, ApiError } from '../lib/api';
 import {
   mapBooking,
@@ -117,6 +131,11 @@ function extractBookingUsers(bookings: any[], payments: any[]) {
   return uniqueById([...bookingUsers, ...paymentUsers]);
 }
 
+function getMockUserPayments(user: User) {
+  const userBookingIds = new Set(mockBookings.filter((booking) => booking.user_id === user.id).map((booking) => booking.id));
+  return mockPayments.filter((payment) => userBookingIds.has(payment.booking_id));
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(() => readSavedUser());
   const [users, setUsers] = useState<User[]>(() => {
@@ -150,52 +169,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const loadPublicData = async () => {
-    const [sportsResponse, courtsResponse] = await Promise.all([
-      apiClient.get<ApiResponse<any[]>>('/sports'),
-      apiClient.get<ApiResponse<any[]>>('/courts'),
-    ]);
+    try {
+      const [sportsResponse, courtsResponse] = await Promise.all([
+        apiClient.get<ApiResponse<any[]>>('/sports'),
+        apiClient.get<ApiResponse<any[]>>('/courts'),
+      ]);
 
-    setSports(sportsResponse.data.map(mapSport));
-    setCourts(courtsResponse.data.map(mapCourt));
+      setSports(sportsResponse.data.map(mapSport));
+      setCourts(courtsResponse.data.map(mapCourt));
+    } catch (error) {
+      console.warn(apiMessage(error, 'Gagal memuat data publik, memakai data mock'));
+      setSports(mockSports);
+      setCourts(mockCourts);
+    }
   };
 
-  const loadUserData = async () => {
-    const response = await apiClient.get<ApiResponse<any[]>>('/my-bookings');
-    const apiBookings = response.data;
-    const mappedBookings = apiBookings.map(mapBooking);
-    const mappedPayments = apiBookings.map(mapPaymentFromBooking).filter(Boolean) as Payment[];
+  const loadUserData = async (user = currentUser) => {
+    try {
+      const response = await apiClient.get<ApiResponse<any[]>>('/my-bookings');
+      const apiBookings = response.data;
+      const mappedBookings = apiBookings.map(mapBooking);
+      const mappedPayments = apiBookings.map(mapPaymentFromBooking).filter(Boolean) as Payment[];
 
-    setBookings(mappedBookings);
-    setPayments(mappedPayments);
+      setBookings(mappedBookings);
+      setPayments(mappedPayments);
+    } catch (error) {
+      console.warn(apiMessage(error, 'Gagal memuat booking user, memakai data mock'));
+      setBookings(user ? mockBookings.filter((booking) => booking.user_id === user.id) : []);
+      setPayments(user ? getMockUserPayments(user) : []);
+    }
   };
 
   const loadAdminData = async (user = currentUser) => {
-    const [bookingsResponse, paymentsResponse, adminsResponse] = await Promise.all([
-      apiClient.get<ApiResponse<any[]>>('/bookings'),
-      apiClient.get<ApiResponse<any[]>>('/payments'),
-      user?.role === 'super_admin'
-        ? apiClient.get<ApiResponse<any[]>>('/admins')
-        : Promise.resolve(null),
-    ]);
+    try {
+      const [bookingsResponse, paymentsResponse, adminsResponse] = await Promise.all([
+        apiClient.get<ApiResponse<any[]>>('/bookings'),
+        apiClient.get<ApiResponse<any[]>>('/payments'),
+        user?.role === 'super_admin'
+          ? apiClient.get<ApiResponse<any[]>>('/admins')
+          : Promise.resolve(null),
+      ]);
 
-    const apiBookings = bookingsResponse.data;
-    const apiPayments = paymentsResponse.data;
-    const apiAdmins = adminsResponse?.data || [];
-    const mappedBookings = apiBookings.map(mapBooking);
-    const mappedPayments = apiPayments.map(mapPayment);
-    const relatedUsers = extractBookingUsers(apiBookings, apiPayments);
-    const adminUsers = apiAdmins.map(mapUser);
+      const apiBookings = bookingsResponse.data;
+      const apiPayments = paymentsResponse.data;
+      const apiAdmins = adminsResponse?.data || [];
+      const mappedBookings = apiBookings.map(mapBooking);
+      const mappedPayments = apiPayments.map(mapPayment);
+      const relatedUsers = extractBookingUsers(apiBookings, apiPayments);
+      const adminUsers = apiAdmins.map(mapUser);
 
-    setBookings(mappedBookings);
-    setPayments(mappedPayments);
-    setUsers((currentUsers) => uniqueById([...(user ? [user] : []), ...currentUsers, ...relatedUsers, ...adminUsers]));
+      setBookings(mappedBookings);
+      setPayments(mappedPayments);
+      setUsers((currentUsers) => uniqueById([...(user ? [user] : []), ...currentUsers, ...relatedUsers, ...adminUsers]));
+    } catch (error) {
+      console.warn(apiMessage(error, 'Gagal memuat data admin, memakai data mock'));
+      setBookings(mockBookings);
+      setPayments(mockPayments);
+      setUsers((currentUsers) => uniqueById([...(user ? [user] : []), ...currentUsers, ...mockUsers]));
+    }
   };
 
   const loadProtectedData = async (user = currentUser) => {
     if (!user) return;
 
     if (user.role === 'user') {
-      await loadUserData();
+      await loadUserData(user);
       return;
     }
 
@@ -252,8 +290,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadProtectedData(user);
       return true;
     } catch (error) {
-      console.warn(apiMessage(error, 'Login gagal'));
-      return false;
+      const mockUser = mockUsers.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase() && user.password === password
+      );
+
+      if (!mockUser) {
+        console.warn(apiMessage(error, 'Login gagal'));
+        return false;
+      }
+
+      localStorage.removeItem(TOKEN_KEY);
+      persistAuth(mockUser);
+      await loadPublicData();
+      await loadProtectedData(mockUser);
+      return true;
     }
   };
 
@@ -545,12 +595,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchSchedule = async (courtId: string, date: string) => {
-    const response = await apiClient.get<ApiResponse<{ slots: any[] }>>('/schedules', {
-      court_id: courtId,
-      date,
-    });
+    try {
+      const response = await apiClient.get<ApiResponse<{ slots: any[] }>>('/schedules', {
+        court_id: courtId,
+        date,
+      });
 
-    return response.data.slots.map((slot) => mapTimeSlot(slot, courtId, date));
+      return response.data.slots.map((slot) => mapTimeSlot(slot, courtId, date));
+    } catch (error) {
+      console.warn(apiMessage(error, 'Gagal memuat jadwal, memakai data mock'));
+      return generateTimeSlots(courtId, date);
+    }
   };
 
   const submitPaymentDetail = async (

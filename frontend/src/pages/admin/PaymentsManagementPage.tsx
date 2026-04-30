@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
-import { formatCurrency, formatDateTime } from '../../lib/utils';
+import { calculateDpAmount, calculateTimeDurationHours, formatCurrency, formatDateTime } from '../../lib/utils';
 import { Search, Eye, CheckCircle, Clock, Wallet, MessageCircle } from 'lucide-react';
 
 type PaymentWithRelations = {
@@ -115,7 +115,8 @@ export function PaymentsManagementPage() {
 
   const getPartialStatus = (payment: PaymentWithRelations, paidAmount: number) => {
     if (payment.method === 'cash') {
-      const dpAmount = Math.round((payment.booking?.total_price || payment.amount) * 0.25);
+      const durationHours = calculateTimeDurationHours(payment.booking?.start_time, payment.booking?.end_time);
+      const dpAmount = calculateDpAmount(durationHours);
       return paidAmount <= dpAmount ? 'pembayaran_awal' : 'verifikasi_pembayaran_sisa';
     }
 
