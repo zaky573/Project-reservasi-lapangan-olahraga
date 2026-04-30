@@ -41,7 +41,7 @@ export function LoginPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-primary">Masuk ke THE ARENA</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Masuk untuk mulai reservasi lapangan
+              Masuk untuk mulai memesan lapangan
             </p>
           </div>
         </CardHeader>

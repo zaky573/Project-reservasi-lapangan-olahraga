@@ -6,7 +6,7 @@ const DEFAULT_DATE = new Date().toISOString();
 const SPORT_META: Record<string, { icon: string; description: string; image: string }> = {
   badminton: {
     icon: 'BD',
-    description: 'Lapangan badminton indoor untuk reservasi harian.',
+    description: 'Lapangan badminton indoor untuk pemesanan harian.',
     image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800',
   },
   futsal: {
@@ -47,7 +47,7 @@ function normalizeName(value: unknown) {
 function sportMeta(name: string) {
   return SPORT_META[name.toLowerCase()] || {
     icon: name.slice(0, 2).toUpperCase() || 'SP',
-    description: `Reservasi lapangan ${name}.`,
+    description: `Pemesanan lapangan ${name}.`,
     image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800',
   };
 }
@@ -172,8 +172,9 @@ export function mapBooking(item: any): Booking {
 
 export function mapPayment(item: any): Payment {
   const details = Array.isArray(item?.payment_details) ? item.payment_details : [];
-  const pendingDetail = details.find((detail: any) => detail?.status === 'menunggu');
-  const latestDetail = pendingDetail || details[0];
+  const pendingDetail = details.find((detail: any) => detail?.status === 'menunggu' && detail?.proof_file);
+  const acceptedDetail = details.find((detail: any) => detail?.status === 'diterima' && detail?.proof_file);
+  const latestDetail = pendingDetail || acceptedDetail || details[0];
   const paidAmount = asNumber(item?.paid_amount);
   const totalAmount = asNumber(item?.total_amount ?? item?.amount);
   const submittedAmount = asNumber(latestDetail?.amount, paidAmount || totalAmount);
@@ -181,7 +182,7 @@ export function mapPayment(item: any): Payment {
   const displayAmount = status === 'lunas' || status === 'pembayaran_awal' || status === 'verifikasi_pembayaran_sisa'
     ? paidAmount || submittedAmount
     : submittedAmount;
-  const proofPath = latestDetail?.proof_file || item?.proof_file;
+  const proofPath = acceptedDetail?.proof_file || (!pendingDetail ? latestDetail?.proof_file || item?.proof_file : undefined);
 
   return {
     id: asString(item?.id_payment ?? item?.id),

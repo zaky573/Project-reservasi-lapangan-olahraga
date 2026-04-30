@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Services\BookingPaymentStatusService;
+use App\Services\SimpleExcelService;
 use App\Services\SimplePdfService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class ReportController extends Controller
 {
     public function __construct(
         private readonly BookingPaymentStatusService $bookingPaymentStatusService,
+        private readonly SimpleExcelService $simpleExcelService,
         private readonly SimplePdfService $simplePdfService
     ) {}
 
@@ -22,7 +24,7 @@ class ReportController extends Controller
         $request->validate([
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
-            'export' => 'nullable|in:json,pdf',
+            'export' => 'nullable|in:json,pdf,excel,xls',
         ]);
 
         $startDate = $request->start_date;
@@ -89,7 +91,23 @@ class ReportController extends Controller
             })
             ->values();
 
-        if ($request->get('export', 'json') === 'pdf') {
+        $exportType = $request->get('export', 'json');
+
+        if (in_array($exportType, ['excel', 'xls'], true)) {
+            return $this->downloadExcel(
+                $startDate,
+                $endDate,
+                $generatedAt,
+                $rows->all(),
+                $totalRevenue,
+                $statusSummary,
+                $totalBookingAmount,
+                $totalPaidAmount,
+                $totalRemainingAmount
+            );
+        }
+
+        if ($exportType === 'pdf') {
             return $this->downloadPdf(
                 $startDate,
                 $endDate,
@@ -105,7 +123,7 @@ class ReportController extends Controller
 
         return response()->json([
             'status' => true,
-                'message' => 'Laporan reservasi berhasil diambil',
+                'message' => 'Laporan pemesanan berhasil diambil',
             'data' => [
                 'period' => [
                     'start_date' => $startDate,
@@ -137,7 +155,7 @@ class ReportController extends Controller
     ): Response {
         $pages = [];
         $currentPage = [
-            'REKAP RESERVASI',
+            'REKAP PEMESANAN',
             'Periode : '.$startDate.' s/d '.$endDate,
             'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
             '',
@@ -147,7 +165,7 @@ class ReportController extends Controller
         ];
 
         if ($rows === []) {
-            $currentPage[] = $this->formatPdfEmptyRow('Tidak ada data booking pada periode ini.');
+            $currentPage[] = $this->formatPdfEmptyRow('Tidak ada data pemesanan pada periode ini.');
         } else {
             foreach ($rows as $row) {
                 $currentPage[] = $this->formatPdfRow($row);
@@ -156,7 +174,7 @@ class ReportController extends Controller
                     $currentPage[] = $this->tableSeparator();
                     $pages[] = $currentPage;
                     $currentPage = [
-                        'REKAP RESERVASI (lanjutan)',
+                        'REKAP PEMESANAN (lanjutan)',
                         'Periode : '.$startDate.' s/d '.$endDate,
                         'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
                         '',
@@ -173,18 +191,73 @@ class ReportController extends Controller
         $currentPage[] = 'Ringkasan';
         $currentPage[] = 'Selesai : '.$statusSummary['selesai'];
         $currentPage[] = 'Dibatalkan : '.$statusSummary['dibatalkan'];
-        $currentPage[] = 'Total harga reservasi : Rp '.number_format($totalBookingAmount, 0, ',', '.');
+        $currentPage[] = 'Total harga pemesanan : Rp '.number_format($totalBookingAmount, 0, ',', '.');
         $currentPage[] = 'Total sudah dibayar : Rp '.number_format($totalPaidAmount, 0, ',', '.');
         $currentPage[] = 'Total belum dibayar : Rp '.number_format($totalRemainingAmount, 0, ',', '.');
         $currentPage[] = 'Total pendapatan terbayar : Rp '.number_format($totalRevenue, 0, ',', '.');
         $pages[] = $currentPage;
 
-        $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Reservasi');
-        $filename = 'rekap-reservasi-'.$startDate.'-sampai-'.$endDate.'.pdf';
+        $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Pemesanan');
+        $filename = 'rekap-pemesanan-'.$startDate.'-sampai-'.$endDate.'.pdf';
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function downloadExcel(
+        string $startDate,
+        string $endDate,
+        Carbon $generatedAt,
+        array $rows,
+        float $totalRevenue,
+        array $statusSummary,
+        float $totalBookingAmount,
+        float $totalPaidAmount,
+        float $totalRemainingAmount
+    ): Response {
+        $excelRows = array_map(function (array $row) {
+            return [
+                'no' => $row['no'],
+                'id_payment' => $row['id_payment'],
+                'booking_date' => $row['booking_date'],
+                'time_slot' => $row['time_slot'],
+                'customer_name' => $row['customer_name'],
+                'court_name' => $row['court_name'],
+                'sport_name' => $row['sport_name'],
+                'payment_method' => $this->paymentMethodLabel($row['payment_method']),
+                'total_booking_amount' => $row['total_booking_amount'],
+                'paid_amount' => $row['paid_amount'],
+                'remaining_amount' => $row['remaining_amount'],
+                'payment_status' => $this->paymentStatusLabel($row['payment_status']),
+                'status' => $this->bookingStatusLabel($row['status']),
+            ];
+        }, $rows);
+
+        $excel = $this->simpleExcelService->generateReport(
+            'Rekap Pemesanan',
+            [
+                ['label' => 'Periode', 'value' => $startDate.' s/d '.$endDate],
+                ['label' => 'Dicetak', 'value' => $generatedAt->format('Y-m-d H:i:s')],
+            ],
+            $this->excelColumns(),
+            $excelRows,
+            [
+                ['label' => 'Selesai', 'value' => $statusSummary['selesai'], 'type' => 'Number'],
+                ['label' => 'Dibatalkan', 'value' => $statusSummary['dibatalkan'], 'type' => 'Number'],
+                ['label' => 'Total harga pemesanan', 'value' => $totalBookingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total sudah dibayar', 'value' => $totalPaidAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total belum dibayar', 'value' => $totalRemainingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total pendapatan terbayar', 'value' => $totalRevenue, 'type' => 'Number', 'style' => 'Currency'],
+            ]
+        );
+        $filename = 'rekap-pemesanan-'.$startDate.'-sampai-'.$endDate.'.xls';
+
+        return response($excel, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store, no-cache',
         ]);
     }
 
@@ -266,7 +339,26 @@ class ReportController extends Controller
             ['key' => 'paid_amount', 'heading' => 'Dibayar', 'width' => 10, 'align' => 'right'],
             ['key' => 'remaining_amount', 'heading' => 'Sisa', 'width' => 10, 'align' => 'right'],
             ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'width' => 18],
-            ['key' => 'status', 'heading' => 'Status Reservasi', 'width' => 16],
+            ['key' => 'status', 'heading' => 'Status Pemesanan', 'width' => 16],
+        ];
+    }
+
+    private function excelColumns(): array
+    {
+        return [
+            ['key' => 'no', 'heading' => 'No', 'type' => 'Number', 'width' => 45],
+            ['key' => 'id_payment', 'heading' => 'ID Pembayaran', 'type' => 'String', 'width' => 90],
+            ['key' => 'booking_date', 'heading' => 'Tanggal', 'type' => 'String', 'width' => 90],
+            ['key' => 'time_slot', 'heading' => 'Jam', 'type' => 'String', 'width' => 100],
+            ['key' => 'customer_name', 'heading' => 'Pelanggan', 'type' => 'String', 'width' => 130],
+            ['key' => 'court_name', 'heading' => 'Lapangan', 'type' => 'String', 'width' => 120],
+            ['key' => 'sport_name', 'heading' => 'Olahraga', 'type' => 'String', 'width' => 100],
+            ['key' => 'payment_method', 'heading' => 'Metode Pembayaran', 'type' => 'String', 'width' => 130],
+            ['key' => 'total_booking_amount', 'heading' => 'Total Pemesanan', 'type' => 'Number', 'style' => 'Currency', 'width' => 130],
+            ['key' => 'paid_amount', 'heading' => 'Sudah Dibayar', 'type' => 'Number', 'style' => 'Currency', 'width' => 120],
+            ['key' => 'remaining_amount', 'heading' => 'Sisa Pembayaran', 'type' => 'Number', 'style' => 'Currency', 'width' => 130],
+            ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'type' => 'String', 'width' => 170],
+            ['key' => 'status', 'heading' => 'Status Pemesanan', 'type' => 'String', 'width' => 140],
         ];
     }
 
@@ -293,7 +385,7 @@ class ReportController extends Controller
     private function bookingStatusLabel(?string $status): string
     {
         return match ($status) {
-            'dibooking' => 'Dibooking',
+            'dibooking' => 'Dipesan',
             'sedang_digunakan' => 'Sedang Digunakan',
             'selesai' => 'Selesai',
             'dibatalkan' => 'Dibatalkan',

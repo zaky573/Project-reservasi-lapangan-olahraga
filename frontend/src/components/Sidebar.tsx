@@ -11,7 +11,7 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: 'Dasbor', path: '/dashboard' },
     { icon: Trophy, label: 'Olahraga', path: '/admin/sports' },
     { icon: MapPin, label: 'Lapangan', path: '/admin/courts' },
-    { icon: Calendar, label: 'Reservasi', path: '/admin/bookings' },
+    { icon: Calendar, label: 'Pemesanan', path: '/admin/bookings' },
     { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments' },
   ];
 
@@ -19,7 +19,7 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: 'Dasbor', path: '/dashboard' },
     { icon: Trophy, label: 'Olahraga', path: '/admin/sports' },
     { icon: MapPin, label: 'Lapangan', path: '/admin/courts' },
-    { icon: Calendar, label: 'Reservasi', path: '/admin/bookings' },
+    { icon: Calendar, label: 'Pemesanan', path: '/admin/bookings' },
     { icon: CreditCard, label: 'Pembayaran', path: '/admin/payments' },
     { icon: Users, label: 'Kelola Admin', path: '/super-admin/admins' },
     { icon: FileText, label: 'Rekap Data', path: '/super-admin/reports' },

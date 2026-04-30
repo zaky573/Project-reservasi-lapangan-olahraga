@@ -211,7 +211,7 @@ export function CourtDetailPage() {
                     Pilih jam mulai terlebih dulu, lalu gunakan tombol tambah untuk menambah durasi.
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Pelanggan bisa reservasi lebih dari satu jam, tetapi penambahan waktu hanya mengikuti slot berikutnya yang masih tersedia.
+                    Pelanggan bisa memesan lebih dari satu jam, tetapi penambahan waktu hanya mengikuti slot berikutnya yang masih tersedia.
                   </p>
                 </div>
 
@@ -269,7 +269,7 @@ export function CourtDetailPage() {
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="w-4 h-4 bg-muted border border-muted rounded"></div>
-                          <span className="text-muted-foreground">Sudah direservasi</span>
+                          <span className="text-muted-foreground">Sudah dipesan</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <div className="w-4 h-4 bg-muted/60 border border-muted rounded"></div>
@@ -323,7 +323,7 @@ export function CourtDetailPage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-20">
               <CardHeader>
-                <h2 className="text-xl font-semibold text-foreground">Ringkasan Reservasi</h2>
+                <h2 className="text-xl font-semibold text-foreground">Ringkasan Pemesanan</h2>
               </CardHeader>
               <CardContent>
                 {selectedSlots.length > 0 ? (
@@ -365,14 +365,14 @@ export function CourtDetailPage() {
                       className="w-full"
                       onClick={handleBooking}
                     >
-                      Lanjut ke Reservasi
+                      Lanjut ke Pemesanan
                     </Button>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                     <p className="text-muted-foreground text-sm">
-                      Pilih jam mulai, lalu tambah durasi jika ingin reservasi lebih dari satu jam
+                      Pilih jam mulai, lalu tambah durasi jika ingin memesan lebih dari satu jam
                     </p>
                   </div>
                 )}

@@ -17,7 +17,7 @@ export function LandingPage() {
     },
     {
       icon: Clock,
-      title: 'Reservasi Mudah & Cepat',
+      title: 'Pemesanan Mudah & Cepat',
       description: 'Pilih jadwal, bayar, dan main!',
     },
     {
@@ -102,12 +102,12 @@ export function LandingPage() {
             Selamat Datang di THE ARENA
           </h1>
           <p className="mb-8 text-lg text-white/90 sm:text-xl md:text-2xl">
-            Platform reservasi lapangan olahraga terlengkap dan termudah.
+            Platform pemesanan lapangan olahraga terlengkap dan termudah.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/register">
               <Button variant="primary" size="lg" className="bg-white text-primary hover:bg-white/90">
-                Mulai Reservasi Sekarang
+                Mulai Pesan Sekarang
               </Button>
             </Link>
             <Link to="/login">
@@ -158,7 +158,7 @@ export function LandingPage() {
           <div className="mt-10 flex justify-center">
             <Link to="/register">
               <Button variant="primary" size="lg">
-                Lihat Jadwal dan Booking
+                Lihat Jadwal dan Pesan
               </Button>
             </Link>
           </div>
@@ -170,7 +170,7 @@ export function LandingPage() {
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-foreground">Fasilitas Unggulan Kami</h2>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              Rasakan kenyamanan reservasi lapangan dengan fasilitas lengkap dan area yang terawat.
+              Rasakan kenyamanan pemesanan lapangan dengan fasilitas lengkap dan area yang terawat.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -221,14 +221,14 @@ export function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold mb-6 text-foreground">
-                Cara Reservasi di THE ARENA
+                Cara Pemesanan di THE ARENA
               </h2>
               <div className="space-y-4">
                 {[
                   'Pilih jenis olahraga favorit Anda',
                   'Pilih lapangan yang tersedia',
                   'Tentukan tanggal dan waktu bermain',
-                  'Isi data reservasi dan pilih metode pembayaran',
+                  'Isi data pemesanan dan pilih metode pembayaran',
                   'Upload bukti pembayaran (jika transfer)',
                   'Tunggu konfirmasi dan siap bermain!',
                 ].map((step, index) => (
@@ -260,7 +260,7 @@ export function LandingPage() {
             <div>
               <h3 className="text-2xl font-bold mb-3">THE ARENA</h3>
               <p className="text-white/85 leading-relaxed">
-                Platform reservasi lapangan olahraga yang memudahkan Anda menemukan, memesan, dan bermain tanpa ribet.
+                Platform pemesanan lapangan olahraga yang memudahkan Anda menemukan, memesan, dan bermain tanpa ribet.
               </p>
             </div>
 
@@ -268,7 +268,7 @@ export function LandingPage() {
               <h4 className="text-lg font-semibold mb-4">Navigasi Cepat</h4>
               <div className="space-y-3 text-white/90">
                 <Link to="/register" className="block hover:text-white transition-colors">
-                  Mulai Reservasi
+                  Mulai Pesan
                 </Link>
                 <Link to="/login" className="block hover:text-white transition-colors">
                   Masuk

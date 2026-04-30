@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { PaymentProofPreview } from '../components/PaymentProofPreview';
 import { Payment } from '../data/mockData';
 import { formatCurrency, formatDateTime } from '../lib/utils';
 import { Banknote, Calendar, FileImage, Upload } from 'lucide-react';
@@ -18,7 +19,7 @@ export function MyBookingsPage() {
   const getBookingStatusBadge = (status: string) => {
     switch (status) {
       case 'dibooking':
-        return <Badge variant="warning">Dibooking</Badge>;
+        return <Badge variant="warning">Dipesan</Badge>;
       case 'sedang_digunakan':
         return <Badge variant="info">Sedang Digunakan</Badge>;
       case 'selesai':
@@ -121,9 +122,9 @@ export function MyBookingsPage() {
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Riwayat Reservasi</h1>
+          <h1 className="text-3xl font-bold text-foreground">Riwayat Pemesanan</h1>
           <p className="text-muted-foreground mt-2">
-            Lihat semua reservasi Anda di sini
+            Lihat semua pemesanan Anda di sini
           </p>
         </div>
 
@@ -131,9 +132,9 @@ export function MyBookingsPage() {
           <Card>
             <CardContent className="text-center py-12">
               <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">Belum ada reservasi</p>
+              <p className="text-muted-foreground mb-2">Belum ada pemesanan</p>
               <p className="text-sm text-muted-foreground">
-                Mulai reservasi lapangan favorit Anda sekarang
+                Mulai pesan lapangan favorit Anda sekarang
               </p>
             </CardContent>
           </Card>
@@ -165,7 +166,7 @@ export function MyBookingsPage() {
                             {court?.name || 'Lapangan tidak diketahui'}
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            ID Reservasi: #{booking.id}
+                            ID Pemesanan: #{booking.id}
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-2">
@@ -235,6 +236,20 @@ export function MyBookingsPage() {
                               {getPaymentNote(payment, remainingAmount)}
                             </p>
                           </div>
+                        </div>
+                      )}
+                      {payment && (payment.proof_url || payment.pending_proof_url) && (
+                        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                          <PaymentProofPreview
+                            src={payment.proof_url}
+                            title="Bukti Pembayaran"
+                            amountLabel={`Nominal tercatat ${formatCurrency(payment.amount)}`}
+                          />
+                          <PaymentProofPreview
+                            src={payment.pending_proof_url}
+                            title="Bukti Transfer Sisa"
+                            amountLabel={payment.pending_amount ? `Diajukan ${formatCurrency(payment.pending_amount)}` : undefined}
+                          />
                         </div>
                       )}
                       {payment && payment.status !== 'menunggu' && payment.status !== 'lunas' && remainingAmount > 0 && (

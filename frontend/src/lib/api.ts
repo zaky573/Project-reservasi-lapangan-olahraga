@@ -63,6 +63,13 @@ export function buildStorageUrl(path?: string | null) {
   if (/^(https?:|blob:|data:)/.test(path)) return path;
 
   const cleanPath = path.replace(/^\/+/, '');
+  const publicPath = cleanPath.replace(/^storage\//, '');
+
+  if (publicPath.startsWith('payment_proofs/')) {
+    const proofPath = publicPath.replace(/^payment_proofs\//, '');
+    return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/payment-proofs/${proofPath}` : `/payment-proofs/${proofPath}`;
+  }
+
   const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
 
   return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/${storagePath}` : `/${storagePath}`;

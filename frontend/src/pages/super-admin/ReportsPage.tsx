@@ -46,7 +46,7 @@ const defaultEndDate = formatDateInputValue(new Date(today.getFullYear(), today.
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
-    dibooking: 'Dibooking',
+    dibooking: 'Dipesan',
     sedang_digunakan: 'Sedang Digunakan',
     selesai: 'Selesai',
     dibatalkan: 'Dibatalkan',
@@ -122,7 +122,7 @@ export function ReportsPage() {
     }
   }, [startDate, endDate]);
 
-  const downloadPdf = async () => {
+  const downloadExcel = async () => {
     if (dateRangeInvalid) {
       setError('Tanggal sampai tidak boleh lebih awal dari tanggal dari.');
       return;
@@ -135,18 +135,18 @@ export function ReportsPage() {
       const blob = await apiClient.downloadBlob('/reports/bookings', {
         start_date: startDate,
         end_date: endDate,
-        export: 'pdf',
+        export: 'excel',
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `rekap-reservasi-${startDate}-sampai-${endDate}.pdf`;
+      link.download = `rekap-pemesanan-${startDate}-sampai-${endDate}.xls`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(err?.message || 'Gagal membuat PDF.');
+      setError(err?.message || 'Gagal membuat Excel.');
     } finally {
       setDownloading(false);
     }
@@ -183,7 +183,7 @@ export function ReportsPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Rekap Data</h1>
-        <p className="text-muted-foreground mt-2">Pratinjau rekap reservasi selesai dan dibatalkan sebelum diunduh sebagai PDF</p>
+        <p className="text-muted-foreground mt-2">Pratinjau rekap pemesanan selesai dan dibatalkan sebelum diunduh sebagai Excel</p>
       </div>
 
       <Card className="mb-8">
@@ -220,9 +220,9 @@ export function ReportsPage() {
               <Button variant="outline" onClick={loadReport} disabled={loading}>
                 {loading ? 'Memuat...' : 'Tampilkan Data'}
               </Button>
-              <Button variant="primary" onClick={downloadPdf} disabled={!report || downloading || dateRangeInvalid}>
+              <Button variant="primary" onClick={downloadExcel} disabled={!report || downloading || dateRangeInvalid}>
                 <Download className="w-4 h-4 mr-2" />
-                {downloading ? 'Membuat PDF...' : 'Unduh PDF'}
+                {downloading ? 'Membuat Excel...' : 'Unduh Excel'}
               </Button>
             </div>
           </div>
@@ -251,7 +251,7 @@ export function ReportsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Reservasi</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Pemesanan</p>
                 <p className="text-2xl font-bold text-foreground">{report?.total_bookings || 0}</p>
               </div>
               <div className="bg-secondary/10 p-3 rounded-lg">
@@ -290,12 +290,12 @@ export function ReportsPage() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Pelanggan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Lapangan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Jam</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Total Reservasi</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Total Pemesanan</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Terbayar</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Sisa</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Metode</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status Pembayaran</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status Reservasi</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status Pemesanan</th>
                 </tr>
               </thead>
               <tbody>
@@ -345,7 +345,7 @@ export function ReportsPage() {
 
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold text-foreground">Reservasi per Olahraga</h2>
+            <h2 className="text-xl font-semibold text-foreground">Pemesanan per Olahraga</h2>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -354,7 +354,7 @@ export function ReportsPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="bookings" fill="#85C79A" name="Reservasi" />
+                <Bar dataKey="bookings" fill="#85C79A" name="Pemesanan" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

@@ -31,7 +31,7 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
@@ -95,14 +95,14 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
         if ($booking->user_id !== $request->user()->id) {
             return response()->json([
                 'status' => false,
-                'message' => 'Tidak punya akses ke booking ini',
+                'message' => 'Tidak punya akses ke pemesanan ini',
             ], 403);
         }
 
@@ -160,14 +160,14 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
         if (! $this->canAccessBooking($request, $booking)) {
             return response()->json([
                 'status' => false,
-                'message' => 'Tidak punya akses ke booking ini',
+                'message' => 'Tidak punya akses ke pemesanan ini',
             ], 403);
         }
 
@@ -346,7 +346,7 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
@@ -390,14 +390,14 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
         if ($booking->user_id !== $request->user()->id) {
             return response()->json([
                 'status' => false,
-                'message' => 'Tidak punya akses ke booking ini',
+                'message' => 'Tidak punya akses ke pemesanan ini',
             ], 403);
         }
 
@@ -411,7 +411,7 @@ class PaymentController extends Controller
         if (in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak bisa dibayar',
+                'message' => 'Pemesanan tidak bisa dibayar',
             ], 422);
         }
 
@@ -524,7 +524,7 @@ class PaymentController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
@@ -638,7 +638,7 @@ class PaymentController extends Controller
     {
         if (in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
             throw ValidationException::withMessages([
-                'booking' => ['Booking tidak bisa dibayar.'],
+                'booking' => ['Pemesanan tidak bisa dibayar.'],
             ]);
         }
     }
@@ -739,7 +739,7 @@ class PaymentController extends Controller
         }
 
         $message = sprintf(
-            "Halo %s, pembayaran booking #%s untuk %s tanggal %s jam %s-%s masih kurang Rp %s. Mohon lakukan pembayaran sisa agar booking tetap aktif. Terima kasih.",
+            "Halo %s, pembayaran pemesanan #%s untuk %s tanggal %s jam %s-%s masih kurang Rp %s. Mohon lakukan pembayaran sisa agar pemesanan tetap aktif. Terima kasih.",
             $payment->booking->customer_name,
             $payment->booking->id,
             $payment->booking->court?->name ?? 'lapangan',

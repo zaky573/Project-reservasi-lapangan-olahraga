@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { PaymentProofPreview } from '../components/PaymentProofPreview';
 import { CheckCircle } from 'lucide-react';
 import { Booking, Payment } from '../data/mockData';
 import { calculateDpAmount, calculateTimeDurationHours, DP_PER_HOUR, formatCurrency } from '../lib/utils';
@@ -20,7 +21,7 @@ export function BookingSuccessPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground mb-4">Data reservasi tidak ditemukan</p>
+            <p className="text-muted-foreground mb-4">Data pemesanan tidak ditemukan</p>
             <Button onClick={() => navigate('/sports')}>Kembali ke Daftar Olahraga</Button>
           </CardContent>
         </Card>
@@ -56,18 +57,18 @@ export function BookingSuccessPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-success/20 rounded-full mb-6">
               <CheckCircle className="w-12 h-12 text-success" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Reservasi Berhasil!</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Pemesanan Berhasil!</h1>
             <p className="text-muted-foreground mb-8">
               {payment.method === 'transfer'
-                ? 'Pembayaran transfer 100% Anda sedang diverifikasi. Cek status di halaman Riwayat Reservasi.'
+                ? 'Pembayaran transfer 100% Anda sedang diverifikasi. Cek status di halaman Riwayat Pemesanan.'
                 : `DP ${formatCurrency(cashDpAmount)} (${formatCurrency(DP_PER_HOUR)} x ${bookingDuration} jam) Anda sedang diverifikasi. Setelah itu, sisa pembayaran tunai dibayar di tempat saat Anda tiba.`}
             </p>
 
             <div className="bg-muted/30 rounded-lg p-6 text-left mb-6">
-              <h2 className="font-semibold text-foreground mb-4">Detail Reservasi</h2>
+              <h2 className="font-semibold text-foreground mb-4">Detail Pemesanan</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">ID Reservasi</span>
+                  <span className="text-muted-foreground">ID Pemesanan</span>
                   <span className="font-medium text-foreground">#{booking.id}</span>
                 </div>
                 <div className="flex justify-between">
@@ -131,20 +132,28 @@ export function BookingSuccessPage() {
               </div>
             </div>
 
+            <div className="mb-6 text-left">
+              <PaymentProofPreview
+                src={payment.proof_url || payment.pending_proof_url}
+                title="Bukti Pembayaran"
+                amountLabel={`Nominal dikirim ${formatCurrency(payment.pending_amount || payment.amount)}`}
+              />
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant="primary"
                 className="flex-1"
                 onClick={() => navigate('/my-bookings')}
               >
-                Lihat Riwayat Reservasi
+                Lihat Riwayat Pemesanan
               </Button>
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => navigate('/sports')}
               >
-                Reservasi Lagi
+                Pesan Lagi
               </Button>
             </div>
           </CardContent>

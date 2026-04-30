@@ -26,7 +26,7 @@ export function Navbar() {
                 <Link to={currentUser.role === 'user' ? '/sports' : '/dashboard'}>
                   <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
                     <Home className="w-4 h-4 mr-2" />
-                    {currentUser.role === 'user' ? 'Reservasi' : 'Dasbor'}
+                    {currentUser.role === 'user' ? 'Pemesanan' : 'Dasbor'}
                   </Button>
                 </Link>
                 {currentUser.role === 'user' && (

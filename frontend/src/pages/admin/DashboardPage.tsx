@@ -23,7 +23,7 @@ export function DashboardPage() {
       bg: 'bg-secondary/10',
     },
     {
-      label: 'Total Reservasi',
+      label: 'Total Pemesanan',
       value: bookings.length,
       icon: Calendar,
       color: 'text-accent',
@@ -120,7 +120,7 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold text-foreground">Reservasi per Olahraga</h2>
+          <h2 className="text-xl font-semibold text-foreground">Pemesanan per Olahraga</h2>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>

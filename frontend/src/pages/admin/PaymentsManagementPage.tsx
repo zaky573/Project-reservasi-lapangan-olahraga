@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { PaymentProofPreview } from '../../components/PaymentProofPreview';
 import { calculateDpAmount, calculateTimeDurationHours, formatCurrency, formatDateTime } from '../../lib/utils';
 import { Search, Eye, CheckCircle, Clock, Wallet, MessageCircle } from 'lucide-react';
 
@@ -137,8 +138,8 @@ export function PaymentsManagementPage() {
 
     const message = [
       `Halo ${payment.booking?.customer_name || 'Pelanggan'},`,
-      `pembayaran reservasi #${payment.booking_id} masih kurang ${formatCurrency(payment.remainingAmount)}.`,
-      `Mohon lakukan pembayaran sisa agar reservasi tetap aktif.`,
+      `pembayaran pemesanan #${payment.booking_id} masih kurang ${formatCurrency(payment.remainingAmount)}.`,
+      `Mohon lakukan pembayaran sisa agar pemesanan tetap aktif.`,
       `Terima kasih.`,
     ].join(' ');
 
@@ -331,7 +332,7 @@ export function PaymentsManagementPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Manajemen Pembayaran</h1>
-        <p className="text-muted-foreground mt-2">Kelola pembayaran dan pelunasan reservasi</p>
+        <p className="text-muted-foreground mt-2">Kelola pembayaran dan pelunasan pemesanan</p>
       </div>
 
       <Card>
@@ -341,7 +342,7 @@ export function PaymentsManagementPage() {
               <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Cari nama, email, atau reservasi..."
+                placeholder="Cari nama, email, atau pemesanan..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
@@ -482,16 +483,10 @@ export function PaymentsManagementPage() {
               </p>
             </div>
 
-            {selectedPayment.proof_url && (
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Bukti Pembayaran Awal</p>
-                <img
-                  src={selectedPayment.proof_url}
-                  alt="Bukti Pembayaran Awal"
-                  className="w-full rounded-lg border border-border"
-                />
-              </div>
-            )}
+            <PaymentProofPreview
+              src={selectedPayment.proof_url}
+              title="Bukti Pembayaran Awal"
+            />
 
             {selectedPayment.pending_proof_url && (
               <div className="rounded-lg border border-primary/15 bg-primary/5 p-4">
@@ -501,11 +496,9 @@ export function PaymentsManagementPage() {
                     {formatCurrency(selectedPayment.pending_amount || selectedPayment.remainingAmount)}
                   </p>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">Bukti Transfer Sisa</p>
-                <img
+                <PaymentProofPreview
                   src={selectedPayment.pending_proof_url}
-                  alt="Bukti Transfer Sisa"
-                  className="w-full rounded-lg border border-border"
+                  title="Bukti Transfer Sisa"
                 />
               </div>
             )}

@@ -82,7 +82,7 @@ export function RegisterPage() {
       return;
     }
 
-    setSuccessMessage('Registrasi berhasil. Anda akan diarahkan ke halaman reservasi.');
+    setSuccessMessage('Registrasi berhasil. Anda akan diarahkan ke halaman pemesanan.');
     setLoading(false);
 
     setTimeout(() => {

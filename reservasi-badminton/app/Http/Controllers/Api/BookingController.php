@@ -58,7 +58,7 @@ class BookingController extends Controller
         if ($start->format('i') !== '00' || $end->format('i') !== '00') {
             return response()->json([
                 'status' => false,
-                'message' => 'Jam booking harus kelipatan 1 jam, misalnya 10:00-12:00',
+                'message' => 'Jam pemesanan harus kelipatan 1 jam, misalnya 10:00-12:00',
             ], 422);
         }
 
@@ -68,7 +68,7 @@ class BookingController extends Controller
         if ($durationInMinutes < 60 || $durationInMinutes % 60 !== 0) {
             return response()->json([
                 'status' => false,
-                'message' => 'Durasi booking harus minimal 1 jam dan kelipatan 1 jam',
+                'message' => 'Durasi pemesanan harus minimal 1 jam dan kelipatan 1 jam',
             ], 422);
         }
 
@@ -80,7 +80,7 @@ class BookingController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => 'Booking hanya bisa antara jam 08:00 sampai 22:00',
+                'message' => 'Pemesanan hanya bisa antara jam 08:00 sampai 22:00',
             ], 422);
         }
 
@@ -92,7 +92,7 @@ class BookingController extends Controller
         if ($bookingDate->lt($today)) {
             return response()->json([
                 'status' => false,
-                'message' => 'Tidak bisa booking di tanggal yang sudah lewat',
+                'message' => 'Tidak bisa memesan di tanggal yang sudah lewat',
             ], 422);
         }
 
@@ -105,7 +105,7 @@ class BookingController extends Controller
         if ($bookingStartAt->lte(Carbon::now($timezone))) {
             return response()->json([
                 'status' => false,
-                'message' => 'Tidak bisa booking di jam yang sudah lewat atau sedang berlangsung',
+                'message' => 'Tidak bisa memesan di jam yang sudah lewat atau sedang berlangsung',
             ], 422);
         }
 
@@ -125,7 +125,7 @@ class BookingController extends Controller
         if ($conflict) {
             return response()->json([
                 'status' => false,
-                'message' => 'Slot sudah dibooking',
+                'message' => 'Slot sudah dipesan',
             ], 409);
         }
 
@@ -147,7 +147,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Booking berhasil dibuat',
+            'message' => 'Pemesanan berhasil dibuat',
             'data' => $this->formatBooking($booking),
         ], 201);
     }
@@ -260,7 +260,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Riwayat booking berhasil diambil',
+            'message' => 'Riwayat pemesanan berhasil diambil',
             'data' => $bookings,
         ]);
     }
@@ -303,7 +303,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Daftar semua booking',
+            'message' => 'Daftar semua pemesanan',
             'data' => $data,
         ]);
     }
@@ -316,7 +316,7 @@ class BookingController extends Controller
         if (! $booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking tidak ditemukan',
+                'message' => 'Pemesanan tidak ditemukan',
             ], 404);
         }
 
@@ -324,7 +324,7 @@ class BookingController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Detail booking berhasil diambil',
+            'message' => 'Detail pemesanan berhasil diambil',
             'data' => $this->formatBooking($booking),
         ]);
     }
@@ -334,7 +334,7 @@ class BookingController extends Controller
     {
         return response()->json([
             'status' => false,
-            'message' => 'Status booking diubah otomatis oleh sistem pembayaran dan jadwal.',
+            'message' => 'Status pemesanan diubah otomatis oleh sistem pembayaran dan jadwal.',
         ], 403);
     }
 
@@ -343,7 +343,7 @@ class BookingController extends Controller
     {
         return response()->json([
             'status' => false,
-            'message' => 'Booking tidak dapat dihapus manual. Status booking diatur otomatis.',
+            'message' => 'Pemesanan tidak dapat dihapus manual. Status pemesanan diatur otomatis.',
         ], 403);
     }
 }
