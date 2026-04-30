@@ -422,6 +422,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .post<ApiResponse<any>>('/sports', {
         name: sport.name.toLowerCase(),
         code: sport.code,
+        icon: sport.icon,
+        description: sport.description,
       })
       .then((response) => {
         const mappedSport = mapSport(response.data);
@@ -439,6 +441,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .put<ApiResponse<any>>(`/sports/${sportId}`, {
         name: updates.name?.toLowerCase(),
         code: updates.code,
+        icon: updates.icon,
+        description: updates.description,
       })
       .then((response) => {
         const sport = mapSport(response.data);

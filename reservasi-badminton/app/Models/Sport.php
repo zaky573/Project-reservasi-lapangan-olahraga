@@ -12,6 +12,8 @@ class Sport extends Model
     protected $fillable = [
         'name',
         'code',
+        'icon',
+        'description',
     ];
 
     public function courts()

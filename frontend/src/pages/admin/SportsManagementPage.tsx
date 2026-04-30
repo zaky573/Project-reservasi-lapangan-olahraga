@@ -8,12 +8,57 @@ import { Sport } from '../../data/mockData';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { formatDate } from '../../lib/utils';
 
+const SPORT_ICON_OPTIONS = [
+  { icon: '🏸', label: 'Badminton' },
+  { icon: '⚽', label: 'Sepak bola atau futsal' },
+  { icon: '🏀', label: 'Basket' },
+  { icon: '🏐', label: 'Voli' },
+  { icon: '🎾', label: 'Tenis' },
+  { icon: '🏓', label: 'Tenis meja' },
+  { icon: '🏈', label: 'American football' },
+  { icon: '⚾', label: 'Baseball' },
+  { icon: '🥎', label: 'Softball' },
+  { icon: '🏉', label: 'Rugby' },
+  { icon: '🏏', label: 'Kriket' },
+  { icon: '🏑', label: 'Hoki lapangan' },
+  { icon: '🏒', label: 'Hoki es' },
+  { icon: '🥍', label: 'Lacrosse' },
+  { icon: '🥊', label: 'Tinju' },
+  { icon: '🥋', label: 'Bela diri' },
+  { icon: '🤼', label: 'Gulat' },
+  { icon: '🤺', label: 'Anggar' },
+  { icon: '🏊', label: 'Renang' },
+  { icon: '🚴', label: 'Bersepeda' },
+  { icon: '🏃', label: 'Lari' },
+  { icon: '🏋️', label: 'Angkat beban' },
+  { icon: '🤸', label: 'Senam' },
+  { icon: '🧘', label: 'Yoga' },
+  { icon: '🧗', label: 'Panjat tebing' },
+  { icon: '⛳', label: 'Golf' },
+  { icon: '🏹', label: 'Panahan' },
+  { icon: '🎯', label: 'Dart' },
+  { icon: '🎱', label: 'Biliar' },
+  { icon: '🎳', label: 'Bowling' },
+  { icon: '⛸️', label: 'Seluncur es' },
+  { icon: '🛹', label: 'Skateboard' },
+  { icon: '🎿', label: 'Ski' },
+  { icon: '🏂', label: 'Snowboard' },
+  { icon: '🏆', label: 'Olahraga umum' },
+];
+
+const emptySportForm = {
+  name: '',
+  code: '',
+  description: '',
+  icon: '🏸',
+};
+
 export function SportsManagementPage() {
   const { sports, addSport, updateSport, deleteSport } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSport, setEditingSport] = useState<Sport | null>(null);
-  const [formData, setFormData] = useState({ name: '', code: '', description: '', icon: '' });
+  const [formData, setFormData] = useState(emptySportForm);
 
   const filteredSports = sports.filter((sport) =>
     sport.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -35,12 +80,12 @@ export function SportsManagementPage() {
 
     setIsModalOpen(false);
     setEditingSport(null);
-    setFormData({ name: '', code: '', description: '', icon: '' });
+    setFormData(emptySportForm);
   };
 
   const handleEdit = (sport: Sport) => {
     setEditingSport(sport);
-    setFormData({ name: sport.name, code: sport.code, description: sport.description, icon: sport.icon });
+    setFormData({ name: sport.name, code: sport.code, description: sport.description, icon: sport.icon || '🏆' });
     setIsModalOpen(true);
   };
 
@@ -61,7 +106,7 @@ export function SportsManagementPage() {
           variant="primary"
           onClick={() => {
             setEditingSport(null);
-            setFormData({ name: '', code: '', description: '', icon: '' });
+            setFormData(emptySportForm);
             setIsModalOpen(true);
           }}
         >
@@ -162,13 +207,36 @@ export function SportsManagementPage() {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
           />
-          <Input
-            label="Ikon"
-            value={formData.icon}
-            onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-            placeholder="🏸"
-            required
-          />
+          <div>
+            <label className="block text-sm mb-1.5 text-foreground">Ikon Olahraga</label>
+            <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+              <span className="text-3xl leading-none">{formData.icon}</span>
+              <span className="text-sm text-muted-foreground">Pilih ikon yang paling sesuai dengan olahraga.</span>
+            </div>
+            <div className="grid max-h-56 grid-cols-5 gap-2 overflow-y-auto rounded-lg border border-border bg-background p-3 sm:grid-cols-7">
+              {SPORT_ICON_OPTIONS.map((option) => {
+                const isSelected = formData.icon === option.icon;
+
+                return (
+                  <button
+                    key={`${option.icon}-${option.label}`}
+                    type="button"
+                    title={option.label}
+                    aria-label={option.label}
+                    aria-pressed={isSelected}
+                    onClick={() => setFormData({ ...formData, icon: option.icon })}
+                    className={`flex h-11 w-11 items-center justify-center rounded-lg border text-2xl transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-foreground ring-2 ring-primary/30'
+                        : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    {option.icon}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Batal

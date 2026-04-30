@@ -16,6 +16,8 @@ class SportController extends Controller
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
                 'code' => $sport->code,
+                'icon' => $sport->icon,
+                'description' => $sport->description,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ];
@@ -23,7 +25,7 @@ class SportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Daftar sport berhasil diambil',
+            'message' => 'Daftar olahraga berhasil diambil',
             'data' => $sports,
         ]);
     }
@@ -34,6 +36,8 @@ class SportController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:sports,name',
             'code' => 'required|string|max:10|alpha_num|unique:sports,code',
+            'icon' => 'required|string|max:20',
+            'description' => 'required|string|max:1000',
         ]);
 
         $validated['name'] = strtolower($validated['name']);
@@ -43,11 +47,13 @@ class SportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Sport berhasil ditambahkan',
+            'message' => 'Olahraga berhasil ditambahkan',
             'data' => [
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
                 'code' => $sport->code,
+                'icon' => $sport->icon,
+                'description' => $sport->description,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],
@@ -62,13 +68,15 @@ class SportController extends Controller
         if (! $sport) {
             return response()->json([
                 'status' => false,
-                'message' => 'Sport tidak ditemukan',
+                'message' => 'Olahraga tidak ditemukan',
             ], 404);
         }
 
         $validated = $request->validate([
             'name' => 'required|string|unique:sports,name,'.$id,
             'code' => 'required|string|max:10|alpha_num|unique:sports,code,'.$id,
+            'icon' => 'required|string|max:20',
+            'description' => 'required|string|max:1000',
         ]);
 
         $validated['name'] = strtolower($validated['name']);
@@ -78,11 +86,13 @@ class SportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Sport berhasil diupdate',
+            'message' => 'Olahraga berhasil diperbarui',
             'data' => [
                 'id_sport' => $sport->id,
                 'name' => $sport->name,
                 'code' => $sport->code,
+                'icon' => $sport->icon,
+                'description' => $sport->description,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],
@@ -97,7 +107,7 @@ class SportController extends Controller
         if (! $sport) {
             return response()->json([
                 'status' => false,
-                'message' => 'Sport tidak ditemukan',
+                'message' => 'Olahraga tidak ditemukan',
             ], 404);
         }
 
@@ -105,7 +115,7 @@ class SportController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Sport berhasil dihapus',
+            'message' => 'Olahraga berhasil dihapus',
         ]);
     }
 }
