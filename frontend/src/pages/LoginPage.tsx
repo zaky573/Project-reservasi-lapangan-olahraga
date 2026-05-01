@@ -50,7 +50,7 @@ export function LoginPage() {
             <Input
               type="email"
               label="Email"
-              placeholder="user@thearena.com"
+              placeholder="Masukkan email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

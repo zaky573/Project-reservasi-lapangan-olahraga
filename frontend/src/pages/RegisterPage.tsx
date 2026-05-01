@@ -122,7 +122,7 @@ export function RegisterPage() {
               <Input
                 type="text"
                 label="Nama Lengkap"
-                placeholder="John Doe"
+                placeholder="Masukkan nama lengkap"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -130,7 +130,7 @@ export function RegisterPage() {
               <Input
                 type="email"
                 label="Email"
-                placeholder="john@example.com"
+                placeholder="Masukkan email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -138,7 +138,7 @@ export function RegisterPage() {
               <Input
                 type="tel"
                 label="Nomor HP"
-                placeholder="08123456789"
+                placeholder="Masukkan nomor HP"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
@@ -146,7 +146,7 @@ export function RegisterPage() {
               <Input
                 type="password"
                 label="Password"
-                placeholder="Minimal 6 karakter"
+                placeholder="Masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -154,7 +154,7 @@ export function RegisterPage() {
               <Input
                 type="password"
                 label="Konfirmasi Password"
-                placeholder="Ulangi password"
+                placeholder="Masukkan ulang password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -177,7 +177,7 @@ export function RegisterPage() {
               <Input
                 type="text"
                 label="Kode OTP"
-                placeholder="Masukkan 6 digit OTP"
+                placeholder="Masukkan kode OTP"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 maxLength={6}
