@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Services\BookingPaymentStatusService;
 use App\Services\SimpleExcelService;
 use App\Services\SimplePdfService;
+use App\Services\SimpleWordService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +17,8 @@ class ReportController extends Controller
     public function __construct(
         private readonly BookingPaymentStatusService $bookingPaymentStatusService,
         private readonly SimpleExcelService $simpleExcelService,
-        private readonly SimplePdfService $simplePdfService
+        private readonly SimplePdfService $simplePdfService,
+        private readonly SimpleWordService $simpleWordService
     ) {}
 
     public function bookings(Request $request)
@@ -24,7 +26,7 @@ class ReportController extends Controller
         $request->validate([
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
-            'export' => 'nullable|in:json,pdf,excel,xls',
+            'export' => 'nullable|in:json,pdf,excel,xls,word,doc',
         ]);
 
         $startDate = $request->start_date;
@@ -95,6 +97,20 @@ class ReportController extends Controller
 
         if (in_array($exportType, ['excel', 'xls'], true)) {
             return $this->downloadExcel(
+                $startDate,
+                $endDate,
+                $generatedAt,
+                $rows->all(),
+                $totalRevenue,
+                $statusSummary,
+                $totalBookingAmount,
+                $totalPaidAmount,
+                $totalRemainingAmount
+            );
+        }
+
+        if (in_array($exportType, ['word', 'doc'], true)) {
+            return $this->downloadWord(
                 $startDate,
                 $endDate,
                 $generatedAt,
@@ -217,23 +233,7 @@ class ReportController extends Controller
         float $totalPaidAmount,
         float $totalRemainingAmount
     ): Response {
-        $excelRows = array_map(function (array $row) {
-            return [
-                'no' => $row['no'],
-                'id_payment' => $row['id_payment'],
-                'booking_date' => $row['booking_date'],
-                'time_slot' => $row['time_slot'],
-                'customer_name' => $row['customer_name'],
-                'court_name' => $row['court_name'],
-                'sport_name' => $row['sport_name'],
-                'payment_method' => $this->paymentMethodLabel($row['payment_method']),
-                'total_booking_amount' => $row['total_booking_amount'],
-                'paid_amount' => $row['paid_amount'],
-                'remaining_amount' => $row['remaining_amount'],
-                'payment_status' => $this->paymentStatusLabel($row['payment_status']),
-                'status' => $this->bookingStatusLabel($row['status']),
-            ];
-        }, $rows);
+        $excelRows = $this->exportRows($rows);
 
         $excel = $this->simpleExcelService->generateReport(
             'Rekap Pemesanan',
@@ -259,6 +259,64 @@ class ReportController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'no-store, no-cache',
         ]);
+    }
+
+    private function downloadWord(
+        string $startDate,
+        string $endDate,
+        Carbon $generatedAt,
+        array $rows,
+        float $totalRevenue,
+        array $statusSummary,
+        float $totalBookingAmount,
+        float $totalPaidAmount,
+        float $totalRemainingAmount
+    ): Response {
+        $word = $this->simpleWordService->generateReport(
+            'Rekap Pemesanan',
+            [
+                ['label' => 'Periode', 'value' => $startDate.' s/d '.$endDate],
+                ['label' => 'Dicetak', 'value' => $generatedAt->format('Y-m-d H:i:s')],
+            ],
+            $this->excelColumns(),
+            $this->exportRows($rows),
+            [
+                ['label' => 'Selesai', 'value' => $statusSummary['selesai'], 'type' => 'Number'],
+                ['label' => 'Dibatalkan', 'value' => $statusSummary['dibatalkan'], 'type' => 'Number'],
+                ['label' => 'Total harga pemesanan', 'value' => $totalBookingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total sudah dibayar', 'value' => $totalPaidAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total belum dibayar', 'value' => $totalRemainingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total pendapatan terbayar', 'value' => $totalRevenue, 'type' => 'Number', 'style' => 'Currency'],
+            ]
+        );
+        $filename = 'rekap-pemesanan-'.$startDate.'-sampai-'.$endDate.'.doc';
+
+        return response($word, 200, [
+            'Content-Type' => 'application/msword; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store, no-cache',
+        ]);
+    }
+
+    private function exportRows(array $rows): array
+    {
+        return array_map(function (array $row) {
+            return [
+                'no' => $row['no'],
+                'id_payment' => $row['id_payment'],
+                'booking_date' => $row['booking_date'],
+                'time_slot' => $row['time_slot'],
+                'customer_name' => $row['customer_name'],
+                'court_name' => $row['court_name'],
+                'sport_name' => $row['sport_name'],
+                'payment_method' => $this->paymentMethodLabel($row['payment_method']),
+                'total_booking_amount' => $row['total_booking_amount'],
+                'paid_amount' => $row['paid_amount'],
+                'remaining_amount' => $row['remaining_amount'],
+                'payment_status' => $this->paymentStatusLabel($row['payment_status']),
+                'status' => $this->bookingStatusLabel($row['status']),
+            ];
+        }, $rows);
     }
 
     private function fitText(string $value, int $length): string
@@ -350,15 +408,15 @@ class ReportController extends Controller
             ['key' => 'id_payment', 'heading' => 'ID Pembayaran', 'type' => 'String', 'width' => 90],
             ['key' => 'booking_date', 'heading' => 'Tanggal', 'type' => 'String', 'width' => 90],
             ['key' => 'time_slot', 'heading' => 'Jam', 'type' => 'String', 'width' => 100],
-            ['key' => 'customer_name', 'heading' => 'Pelanggan', 'type' => 'String', 'width' => 130],
-            ['key' => 'court_name', 'heading' => 'Lapangan', 'type' => 'String', 'width' => 120],
-            ['key' => 'sport_name', 'heading' => 'Olahraga', 'type' => 'String', 'width' => 100],
+            ['key' => 'customer_name', 'heading' => 'Pelanggan', 'type' => 'String', 'width' => 150],
+            ['key' => 'court_name', 'heading' => 'Lapangan', 'type' => 'String', 'width' => 150],
+            ['key' => 'sport_name', 'heading' => 'Olahraga', 'type' => 'String', 'width' => 120],
             ['key' => 'payment_method', 'heading' => 'Metode Pembayaran', 'type' => 'String', 'width' => 130],
             ['key' => 'total_booking_amount', 'heading' => 'Total Pemesanan', 'type' => 'Number', 'style' => 'Currency', 'width' => 130],
             ['key' => 'paid_amount', 'heading' => 'Sudah Dibayar', 'type' => 'Number', 'style' => 'Currency', 'width' => 120],
             ['key' => 'remaining_amount', 'heading' => 'Sisa Pembayaran', 'type' => 'Number', 'style' => 'Currency', 'width' => 130],
-            ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'type' => 'String', 'width' => 170],
-            ['key' => 'status', 'heading' => 'Status Pemesanan', 'type' => 'String', 'width' => 140],
+            ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'type' => 'String', 'width' => 210],
+            ['key' => 'status', 'heading' => 'Status Pemesanan', 'type' => 'String', 'width' => 160],
         ];
     }
 

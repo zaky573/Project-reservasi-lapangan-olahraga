@@ -18,6 +18,7 @@ class SportController extends Controller
                 'code' => $sport->code,
                 'icon' => $sport->icon,
                 'description' => $sport->description,
+                'image' => $sport->image,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ];
@@ -38,6 +39,7 @@ class SportController extends Controller
             'code' => 'required|string|max:10|alpha_num|unique:sports,code',
             'icon' => 'required|string|max:20',
             'description' => 'required|string|max:1000',
+            'image' => 'required|string|max:2048',
         ]);
 
         $validated['name'] = strtolower($validated['name']);
@@ -54,6 +56,7 @@ class SportController extends Controller
                 'code' => $sport->code,
                 'icon' => $sport->icon,
                 'description' => $sport->description,
+                'image' => $sport->image,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],
@@ -77,6 +80,7 @@ class SportController extends Controller
             'code' => 'required|string|max:10|alpha_num|unique:sports,code,'.$id,
             'icon' => 'required|string|max:20',
             'description' => 'required|string|max:1000',
+            'image' => 'required|string|max:2048',
         ]);
 
         $validated['name'] = strtolower($validated['name']);
@@ -93,6 +97,7 @@ class SportController extends Controller
                 'code' => $sport->code,
                 'icon' => $sport->icon,
                 'description' => $sport->description,
+                'image' => $sport->image,
                 'created_at' => $sport->created_at,
                 'updated_at' => $sport->updated_at,
             ],

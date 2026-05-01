@@ -66,6 +66,7 @@ export function mapUser(item: any): User {
 export function mapSport(item: any): Sport {
   const name = normalizeName(item?.name);
   const meta = sportMeta(name);
+  const image = asString(item?.image, meta.image);
 
   return {
     id: asString(item?.id_sport ?? item?.id),
@@ -73,6 +74,7 @@ export function mapSport(item: any): Sport {
     code: asString(item?.code, name.slice(0, 3).toUpperCase()),
     description: asString(item?.description, meta.description),
     icon: asString(item?.icon, meta.icon),
+    image: buildStorageUrl(image) || meta.image,
     created_at: asString(item?.created_at, DEFAULT_DATE),
   };
 }

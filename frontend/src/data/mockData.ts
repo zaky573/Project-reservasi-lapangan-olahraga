@@ -22,6 +22,7 @@ export interface Sport {
   code: string;
   description: string;
   icon: string;
+  image: string;
   created_at: string;
 }
 
@@ -120,6 +121,7 @@ export const mockSports: Sport[] = [
     name: 'Badminton',
     code: 'BDM',
     description: 'Lapangan badminton indoor dengan lantai vinyl berkualitas',
+    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800',
     icon: '🏸',
     created_at: '2024-01-01T00:00:00Z',
   },
@@ -128,6 +130,7 @@ export const mockSports: Sport[] = [
     name: 'Futsal',
     code: 'FTS',
     description: 'Lapangan futsal outdoor dengan rumput sintetis premium',
+    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800',
     icon: '⚽',
     created_at: '2024-01-01T00:00:00Z',
   },
@@ -136,6 +139,7 @@ export const mockSports: Sport[] = [
     name: 'Basketball',
     code: 'BSK',
     description: 'Lapangan basket indoor dengan standar internasional',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800',
     icon: '🏀',
     created_at: '2024-01-15T00:00:00Z',
   },

@@ -14,6 +14,7 @@ class Sport extends Model
         'code',
         'icon',
         'description',
+        'image',
     ];
 
     public function courts()

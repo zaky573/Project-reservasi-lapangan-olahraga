@@ -50,6 +50,7 @@ const emptySportForm = {
   name: '',
   code: '',
   description: '',
+  image: '',
   icon: '🏸',
 };
 
@@ -85,7 +86,13 @@ export function SportsManagementPage() {
 
   const handleEdit = (sport: Sport) => {
     setEditingSport(sport);
-    setFormData({ name: sport.name, code: sport.code, description: sport.description, icon: sport.icon || '🏆' });
+    setFormData({
+      name: sport.name,
+      code: sport.code,
+      description: sport.description,
+      image: sport.image,
+      icon: sport.icon || '🏆',
+    });
     setIsModalOpen(true);
   };
 
@@ -136,6 +143,7 @@ export function SportsManagementPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ikon</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Foto</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Kode</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Nama</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Deskripsi</th>
@@ -147,6 +155,18 @@ export function SportsManagementPage() {
                 {filteredSports.map((sport) => (
                   <tr key={sport.id} className="border-b border-border hover:bg-muted/50">
                     <td className="py-3 px-4 text-2xl">{sport.icon}</td>
+                    <td className="py-3 px-4">
+                      <img
+                        src={sport.image}
+                        alt={sport.name}
+                        onError={(event) => {
+                          if (!event.currentTarget.src.includes('/images/hero-background.jpg')) {
+                            event.currentTarget.src = '/images/hero-background.jpg';
+                          }
+                        }}
+                        className="h-12 w-20 rounded-md object-cover"
+                      />
+                    </td>
                     <td className="py-3 px-4 font-medium text-primary">{sport.code}</td>
                     <td className="py-3 px-4 font-medium text-foreground">{sport.name}</td>
                     <td className="py-3 px-4 text-muted-foreground">{sport.description}</td>
@@ -207,6 +227,27 @@ export function SportsManagementPage() {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
           />
+          <Input
+            label="URL Foto Lapangan"
+            value={formData.image}
+            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            placeholder="https://contoh.com/foto-lapangan.jpg"
+            required
+          />
+          {formData.image && (
+            <div className="overflow-hidden rounded-lg border border-border">
+              <img
+                src={formData.image}
+                alt="Pratinjau foto lapangan"
+                onError={(event) => {
+                  if (!event.currentTarget.src.includes('/images/hero-background.jpg')) {
+                    event.currentTarget.src = '/images/hero-background.jpg';
+                  }
+                }}
+                className="h-40 w-full object-cover"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm mb-1.5 text-foreground">Ikon Olahraga</label>
             <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">

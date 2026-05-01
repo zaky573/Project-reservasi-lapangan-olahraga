@@ -474,6 +474,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         code: sport.code,
         icon: sport.icon,
         description: sport.description,
+        image: sport.image,
       })
       .then((response) => {
         const mappedSport = mapSport(response.data);
@@ -493,6 +494,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         code: updates.code,
         icon: updates.icon,
         description: updates.description,
+        image: updates.image,
       })
       .then((response) => {
         const sport = mapSport(response.data);

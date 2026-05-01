@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { Trophy, MapPin, Clock, CreditCard, CheckCircle, Mail, Phone, Users, ShieldCheck, Wifi, Coffee } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency } from '../lib/utils';
 
 export function LandingPage() {
+  const { sports, courts } = useAuth();
+
   const features = [
     {
       icon: Trophy,
@@ -50,40 +55,67 @@ export function LandingPage() {
     },
   ];
 
-  const courtShowcase = [
-    {
-      name: 'Lapangan Futsal',
-      image: '/images/hero-background.jpg',
-      label: 'Favorit',
-      price: 'Mulai Rp150.000/jam',
-      courtCount: '2 lapangan aktif',
-      description: 'Rumput sintetis premium dengan area bermain luas untuk tim Anda.',
-    },
-    {
-      name: 'Lapangan Badminton',
-      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop',
-      label: 'Indoor',
-      price: 'Mulai Rp80.000/jam',
-      courtCount: '3 lapangan tersedia',
-      description: 'Lapangan nyaman dengan pencahayaan terang untuk latihan maupun pertandingan.',
-    },
-    {
-      name: 'Lapangan Basket',
-      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop',
-      label: 'Reguler',
-      price: 'Mulai Rp120.000/jam',
-      courtCount: '1 lapangan aktif',
-      description: 'Area basket terawat dengan ring standar dan ruang gerak yang lega.',
-    },
-    {
-      name: 'Lapangan Tennis',
-      image: '/images/Tennis.jpg',
-      label: 'Premium',
-      price: 'Mulai Rp120.000/jam',
-      courtCount: 'Area raket',
-      description: 'Lapangan raket indoor untuk bermain santai atau sesi latihan rutin.',
-    },
-  ];
+  const courtShowcase = useMemo(() => {
+    if (sports.length === 0) {
+      return [
+        {
+          name: 'Futsal',
+          image: '/images/hero-background.jpg',
+          label: 'Favorit',
+          price: 'Mulai Rp150.000/jam',
+          courtCount: '2 lapangan aktif',
+          courtNames: 'Lapangan Futsal',
+          description: 'Rumput sintetis premium dengan area bermain luas untuk tim Anda.',
+        },
+        {
+          name: 'Badminton',
+          image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop',
+          label: 'Indoor',
+          price: 'Mulai Rp80.000/jam',
+          courtCount: '3 lapangan aktif',
+          courtNames: 'Lapangan Badminton',
+          description: 'Lapangan nyaman dengan pencahayaan terang untuk latihan maupun pertandingan.',
+        },
+        {
+          name: 'Basket',
+          image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop',
+          label: 'Reguler',
+          price: 'Mulai Rp120.000/jam',
+          courtCount: '1 lapangan aktif',
+          courtNames: 'Lapangan Basket',
+          description: 'Area basket terawat dengan ring standar dan ruang gerak yang lega.',
+        },
+        {
+          name: 'Tenis',
+          image: '/images/Tennis.jpg',
+          label: 'Premium',
+          price: 'Mulai Rp120.000/jam',
+          courtCount: 'Area raket',
+          courtNames: 'Lapangan Tenis',
+          description: 'Lapangan raket indoor untuk bermain santai atau sesi latihan rutin.',
+        },
+      ];
+    }
+
+    return sports.map((sport) => {
+      const sportCourts = courts.filter((court) => court.sport_id === sport.id);
+      const activeCourts = sportCourts.filter((court) => court.status === 'active');
+      const displayCourts = activeCourts.length > 0 ? activeCourts : sportCourts;
+      const minPrice = displayCourts.length > 0
+        ? Math.min(...displayCourts.map((court) => court.price_per_hour))
+        : 0;
+
+      return {
+        name: sport.name,
+        image: sport.image || displayCourts[0]?.image || '/images/hero-background.jpg',
+        label: activeCourts.length > 0 ? 'Tersedia' : 'Belum Aktif',
+        price: minPrice > 0 ? `Mulai ${formatCurrency(minPrice)}/jam` : 'Harga belum diatur',
+        courtCount: `${activeCourts.length} lapangan aktif`,
+        courtNames: displayCourts.slice(0, 3).map((court) => court.name).join(', '),
+        description: sport.description,
+      };
+    });
+  }, [courts, sports]);
 
   return (
     <div className="min-h-screen scroll-smooth md:h-screen md:overflow-y-auto md:snap-y md:snap-mandatory">
@@ -135,6 +167,11 @@ export function LandingPage() {
                   <img
                     src={court.image}
                     alt={court.name}
+                    onError={(event) => {
+                      if (!event.currentTarget.src.includes('/images/hero-background.jpg')) {
+                        event.currentTarget.src = '/images/hero-background.jpg';
+                      }
+                    }}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm">
@@ -149,6 +186,11 @@ export function LandingPage() {
                   <div className="mt-5 border-t border-border pt-4">
                     <p className="text-sm font-semibold text-primary">{court.price}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{court.courtCount}</p>
+                    {court.courtNames && (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        {court.courtNames}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
