@@ -93,6 +93,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     // Sport
     Route::post('/sports', [SportController::class, 'store']);
+    Route::post('/sports/{id}', [SportController::class, 'update']);
     Route::put('/sports/{id}', [SportController::class, 'update']);
     Route::delete('/sports/{id}', [SportController::class, 'destroy']);
 

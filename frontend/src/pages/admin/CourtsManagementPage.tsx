@@ -18,7 +18,7 @@ export function CourtsManagementPage() {
     sport_id: '',
     code: '',
     name: '',
-    price_per_hour: 0,
+    price_per_hour: '',
     status: 'active' as 'active' | 'inactive' | 'maintenance',
     description: '',
     image: '',
@@ -47,12 +47,17 @@ export function CourtsManagementPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const courtData = {
+      ...formData,
+      price_per_hour: Number(formData.price_per_hour),
+    };
+
     if (editingCourt) {
-      updateCourt(editingCourt.id, formData);
+      updateCourt(editingCourt.id, courtData);
     } else {
       const newCourt: Court = {
         id: String(Date.now()),
-        ...formData,
+        ...courtData,
         created_at: new Date().toISOString(),
       };
       addCourt(newCourt);
@@ -64,7 +69,7 @@ export function CourtsManagementPage() {
       sport_id: '',
       code: '',
       name: '',
-      price_per_hour: 0,
+      price_per_hour: '',
       status: 'active',
       description: '',
       image: '',
@@ -99,7 +104,7 @@ export function CourtsManagementPage() {
               sport_id: '',
               code: '',
               name: '',
-              price_per_hour: 0,
+              price_per_hour: '',
               status: 'active',
               description: '',
               image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800',
@@ -158,7 +163,7 @@ export function CourtsManagementPage() {
                               sport_id: court.sport_id,
                               code: court.code,
                               name: court.name,
-                              price_per_hour: court.price_per_hour,
+                              price_per_hour: String(court.price_per_hour),
                               status: court.status,
                               description: court.description,
                               image: court.image,
@@ -242,7 +247,9 @@ export function CourtsManagementPage() {
               label="Harga per Jam"
               type="number"
               value={formData.price_per_hour}
-              onChange={(e) => setFormData({ ...formData, price_per_hour: Number(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, price_per_hour: e.target.value })}
+              min="0"
+              placeholder="Contoh: 50000"
               required
             />
             <div>

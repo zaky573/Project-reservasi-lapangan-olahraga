@@ -51,6 +51,7 @@ const emptySportForm = {
   code: '',
   description: '',
   image: '',
+  image_file: null as File | null,
   icon: '🏸',
 };
 
@@ -67,6 +68,11 @@ export function SportsManagementPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!editingSport && !formData.image_file) {
+      alert('Foto lapangan wajib dipilih dari device.');
+      return;
+    }
 
     if (editingSport) {
       updateSport(editingSport.id, formData);
@@ -91,6 +97,7 @@ export function SportsManagementPage() {
       code: sport.code,
       description: sport.description,
       image: sport.image,
+      image_file: null,
       icon: sport.icon || '🏆',
     });
     setIsModalOpen(true);
@@ -227,13 +234,27 @@ export function SportsManagementPage() {
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
           />
-          <Input
-            label="URL Foto Lapangan"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-            placeholder="https://contoh.com/foto-lapangan.jpg"
-            required
-          />
+          <div>
+            <label className="block text-sm mb-1.5 text-foreground">Foto Lapangan</label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+
+                setFormData({
+                  ...formData,
+                  image_file: file,
+                  image: file ? URL.createObjectURL(file) : editingSport?.image || '',
+                });
+              }}
+              className="w-full rounded-lg border border-border bg-input-background px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+              required={!editingSport}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Format JPG, PNG, atau WEBP. Maksimal 2 MB.
+            </p>
+          </div>
           {formData.image && (
             <div className="overflow-hidden rounded-lg border border-border">
               <img

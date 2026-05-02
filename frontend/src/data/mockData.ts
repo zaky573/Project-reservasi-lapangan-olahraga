@@ -23,6 +23,7 @@ export interface Sport {
   description: string;
   icon: string;
   image: string;
+  image_file?: File | null;
   created_at: string;
 }
 

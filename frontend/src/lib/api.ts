@@ -70,6 +70,11 @@ export function buildStorageUrl(path?: string | null) {
     return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/payment-proofs/${proofPath}` : `/payment-proofs/${proofPath}`;
   }
 
+  if (publicPath.startsWith('sport_images/')) {
+    const imagePath = publicPath.replace(/^sport_images\//, '');
+    return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/sport-images/${imagePath}` : `/sport-images/${imagePath}`;
+  }
+
   const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
 
   return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/${storagePath}` : `/${storagePath}`;

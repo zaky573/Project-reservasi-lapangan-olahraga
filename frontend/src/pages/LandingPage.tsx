@@ -174,9 +174,6 @@ export function LandingPage() {
                     }}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm">
-                    {court.label}
-                  </span>
                 </div>
                 <CardContent className="p-5">
                   <h3 className="text-lg font-semibold text-foreground">{court.name}</h3>

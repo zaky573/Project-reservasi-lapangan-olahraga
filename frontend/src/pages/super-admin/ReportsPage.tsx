@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { apiClient } from '../../lib/api';
 import { formatCurrency, formatDateInputValue } from '../../lib/utils';
-import { Calendar, Download, FileText, TrendingUp, MapPin } from 'lucide-react';
+import { Calendar, Download, FileDown, FileText, TrendingUp, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 type ReportRow = {
@@ -70,7 +70,7 @@ export function ReportsPage() {
   const [endDate, setEndDate] = useState(defaultEndDate);
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState<'excel' | 'word' | null>(null);
+  const [downloading, setDownloading] = useState<'excel' | 'word' | 'pdf' | null>(null);
   const [error, setError] = useState('');
   const dateRangeInvalid = Boolean(startDate && endDate && endDate < startDate);
 
@@ -122,7 +122,7 @@ export function ReportsPage() {
     }
   }, [startDate, endDate]);
 
-  const downloadReport = async (format: 'excel' | 'word') => {
+  const downloadReport = async (format: 'excel' | 'word' | 'pdf') => {
     if (dateRangeInvalid) {
       setError('Tanggal sampai tidak boleh lebih awal dari tanggal dari.');
       return;
@@ -137,7 +137,7 @@ export function ReportsPage() {
         end_date: endDate,
         export: format,
       });
-      const extension = format === 'word' ? 'doc' : 'xls';
+      const extension = format === 'word' ? 'doc' : format === 'pdf' ? 'pdf' : 'xls';
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -147,7 +147,7 @@ export function ReportsPage() {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      setError(err?.message || `Gagal membuat ${format === 'word' ? 'Word' : 'Excel'}.`);
+      setError(err?.message || `Gagal membuat ${format === 'word' ? 'Word' : format === 'pdf' ? 'PDF' : 'Excel'}.`);
     } finally {
       setDownloading(null);
     }
@@ -184,7 +184,7 @@ export function ReportsPage() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Rekap Data</h1>
-        <p className="text-muted-foreground mt-2">Pratinjau rekap pemesanan selesai dan dibatalkan sebelum diunduh sebagai Excel atau Word</p>
+        <p className="text-muted-foreground mt-2">Pratinjau rekap pemesanan selesai dan dibatalkan sebelum diunduh sebagai Excel, Word, atau PDF</p>
       </div>
 
       <Card className="mb-8">
@@ -228,6 +228,10 @@ export function ReportsPage() {
               <Button variant="outline" onClick={() => downloadReport('word')} disabled={!report || Boolean(downloading) || dateRangeInvalid}>
                 <FileText className="w-4 h-4 mr-2" />
                 {downloading === 'word' ? 'Membuat Word...' : 'Unduh Word'}
+              </Button>
+              <Button variant="outline" onClick={() => downloadReport('pdf')} disabled={!report || Boolean(downloading) || dateRangeInvalid}>
+                <FileDown className="w-4 h-4 mr-2" />
+                {downloading === 'pdf' ? 'Membuat PDF...' : 'Unduh PDF'}
               </Button>
             </div>
           </div>

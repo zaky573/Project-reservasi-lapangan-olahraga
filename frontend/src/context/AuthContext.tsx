@@ -468,14 +468,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const addSport = (sport: Sport) => {
+    const formData = new FormData();
+    formData.append('name', sport.name.toLowerCase());
+    formData.append('code', sport.code);
+    formData.append('icon', sport.icon);
+    formData.append('description', sport.description);
+
+    if (sport.image_file) {
+      formData.append('image', sport.image_file);
+    }
+
     apiClient
-      .post<ApiResponse<any>>('/sports', {
-        name: sport.name.toLowerCase(),
-        code: sport.code,
-        icon: sport.icon,
-        description: sport.description,
-        image: sport.image,
-      })
+      .postForm<ApiResponse<any>>('/sports', formData)
       .then((response) => {
         const mappedSport = mapSport(response.data);
         setSports((currentSports) => replaceById(currentSports, mappedSport));
@@ -484,18 +488,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSport = (sportId: string, updates: Partial<Sport>) => {
+    const previousSport = sports.find((sport) => sport.id === sportId);
+    if (!previousSport) return;
+
+    const payload = { ...previousSport, ...updates } as Sport;
+    const formData = new FormData();
+
+    formData.append('name', payload.name.toLowerCase());
+    formData.append('code', payload.code);
+    formData.append('icon', payload.icon);
+    formData.append('description', payload.description);
+
+    if (payload.image_file) {
+      formData.append('image', payload.image_file);
+    }
+
     setSports((currentSports) =>
       currentSports.map((sport) => (sport.id === sportId ? { ...sport, ...updates } : sport))
     );
 
     apiClient
-      .put<ApiResponse<any>>(`/sports/${sportId}`, {
-        name: updates.name?.toLowerCase(),
-        code: updates.code,
-        icon: updates.icon,
-        description: updates.description,
-        image: updates.image,
-      })
+      .postForm<ApiResponse<any>>(`/sports/${sportId}`, formData)
       .then((response) => {
         const sport = mapSport(response.data);
         setSports((currentSports) => replaceById(currentSports, sport));
