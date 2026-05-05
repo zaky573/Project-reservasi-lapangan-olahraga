@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SendMail;
 use App\Models\PendingRegistration;
 use App\Models\PasswordResetOtp;
 use App\Models\User;
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use App\Mail\RegisterOtpMail;
+use App\Mail\ForgotPasswordOtpMail;
 
 class AuthController extends Controller
 {
@@ -440,23 +443,15 @@ class AuthController extends Controller
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    private function sendRegistrationOtp(string $email, string $name, string $otpCode, $expiresAt): void
+    private function sendRegistrationOtp($email, $name, $otpCode, $expiresAt)
     {
-        Mail::raw(
-            "Halo {$name},\n\nKode OTP registrasi akun Anda adalah: {$otpCode}\nKode ini berlaku sampai ".$expiresAt->format('Y-m-d H:i:s').".\n\nJangan berikan kode ini kepada siapa pun.",
-            function ($message) use ($email) {
-                $message->to($email)->subject('Kode OTP Registrasi');
-            }
-        );
+    Mail::to($email)->send(new RegisterOtpMail($name, $otpCode, $expiresAt));
     }
 
-    private function sendForgotPasswordOtp(string $email, string $name, string $otpCode, $expiresAt): void
+    private function sendForgotPasswordOtp($email, $name, $otpCode, $expiresAt)
     {
-        Mail::raw(
-            "Halo {$name},\n\nKode OTP reset password akun Anda adalah: {$otpCode}\nKode ini berlaku sampai ".$expiresAt->format('Y-m-d H:i:s').".\n\nJika Anda tidak meminta reset password, abaikan email ini.",
-            function ($message) use ($email) {
-                $message->to($email)->subject('Kode OTP Reset Password');
-            }
-        );
+    Mail::to($email)->send(
+        new ForgotPasswordOtpMail($name, $otpCode, $expiresAt)
+    );
     }
 }
