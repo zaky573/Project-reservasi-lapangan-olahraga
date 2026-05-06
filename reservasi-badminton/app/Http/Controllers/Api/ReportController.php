@@ -169,51 +169,23 @@ class ReportController extends Controller
         float $totalPaidAmount,
         float $totalRemainingAmount
     ): Response {
-        $pages = [];
-        $currentPage = [
-            'REKAP PEMESANAN',
-            'Periode : '.$startDate.' s/d '.$endDate,
-            'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
-            '',
-            $this->tableSeparator(),
-            $this->tableHeader(),
-            $this->tableSeparator(),
-        ];
-
-        if ($rows === []) {
-            $currentPage[] = $this->formatPdfEmptyRow('Tidak ada data pemesanan pada periode ini.');
-        } else {
-            foreach ($rows as $row) {
-                $currentPage[] = $this->formatPdfRow($row);
-
-                if (count($currentPage) >= 44) {
-                    $currentPage[] = $this->tableSeparator();
-                    $pages[] = $currentPage;
-                    $currentPage = [
-                        'REKAP PEMESANAN (lanjutan)',
-                        'Periode : '.$startDate.' s/d '.$endDate,
-                        'Dicetak : '.$generatedAt->format('Y-m-d H:i:s'),
-                        '',
-                        $this->tableSeparator(),
-                        $this->tableHeader(),
-                        $this->tableSeparator(),
-                    ];
-                }
-            }
-        }
-
-        $currentPage[] = $this->tableSeparator();
-        $currentPage[] = '';
-        $currentPage[] = 'Ringkasan';
-        $currentPage[] = 'Selesai : '.$statusSummary['selesai'];
-        $currentPage[] = 'Dibatalkan : '.$statusSummary['dibatalkan'];
-        $currentPage[] = 'Total harga pemesanan : Rp '.number_format($totalBookingAmount, 0, ',', '.');
-        $currentPage[] = 'Total sudah dibayar : Rp '.number_format($totalPaidAmount, 0, ',', '.');
-        $currentPage[] = 'Total belum dibayar : Rp '.number_format($totalRemainingAmount, 0, ',', '.');
-        $currentPage[] = 'Total pendapatan terbayar : Rp '.number_format($totalRevenue, 0, ',', '.');
-        $pages[] = $currentPage;
-
-        $pdf = $this->simplePdfService->generateFromLines($pages, 'Rekap Pemesanan');
+        $pdf = $this->simplePdfService->generateReport(
+            'Rekap Pemesanan',
+            [
+                ['label' => 'Periode', 'value' => $startDate.' s/d '.$endDate],
+                ['label' => 'Dicetak', 'value' => $generatedAt->format('Y-m-d H:i:s')],
+            ],
+            $this->excelColumns(),
+            $this->exportRows($rows),
+            [
+                ['label' => 'Selesai', 'value' => $statusSummary['selesai'], 'type' => 'Number'],
+                ['label' => 'Dibatalkan', 'value' => $statusSummary['dibatalkan'], 'type' => 'Number'],
+                ['label' => 'Total harga pemesanan', 'value' => $totalBookingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total sudah dibayar', 'value' => $totalPaidAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total belum dibayar', 'value' => $totalRemainingAmount, 'type' => 'Number', 'style' => 'Currency'],
+                ['label' => 'Total pendapatan terbayar', 'value' => $totalRevenue, 'type' => 'Number', 'style' => 'Currency'],
+            ]
+        );
         $filename = 'rekap-pemesanan-'.$startDate.'-sampai-'.$endDate.'.pdf';
 
         return response($pdf, 200, [
@@ -319,88 +291,6 @@ class ReportController extends Controller
         }, $rows);
     }
 
-    private function fitText(string $value, int $length): string
-    {
-        if (strlen($value) <= $length) {
-            return $value;
-        }
-
-        return substr($value, 0, max($length - 1, 1)).'.';
-    }
-
-    private function tableHeader(): string
-    {
-        return $this->formatPdfCells(array_column($this->tableColumns(), 'heading'));
-    }
-
-    private function tableSeparator(): string
-    {
-        $parts = array_map(
-            fn (array $column) => str_repeat('-', $column['width'] + 2),
-            $this->tableColumns()
-        );
-
-        return '+'.implode('+', $parts).'+';
-    }
-
-    private function formatPdfRow(array $row): string
-    {
-        return $this->formatPdfCells(
-            [
-                $row['no'],
-                $row['booking_date'],
-                $row['time_slot'],
-                $row['customer_name'],
-                $row['court_name'],
-                $row['sport_name'],
-                $this->paymentMethodLabel($row['payment_method']),
-                number_format($row['total_booking_amount'], 0, ',', '.'),
-                number_format($row['paid_amount'], 0, ',', '.'),
-                number_format($row['remaining_amount'], 0, ',', '.'),
-                $this->paymentStatusLabel($row['payment_status']),
-                $this->bookingStatusLabel($row['status']),
-            ],
-            ['total_booking_amount', 'paid_amount', 'remaining_amount']
-        );
-    }
-
-    private function formatPdfCells(array $values, array $rightAlignedKeys = []): string
-    {
-        $segments = [];
-
-        foreach ($this->tableColumns() as $index => $column) {
-            $value = $this->fitText((string) ($values[$index] ?? ''), $column['width']);
-            $shouldAlignRight = in_array($column['key'], $rightAlignedKeys, true) || ($column['align'] ?? 'left') === 'right';
-
-            $segments[] = ' '.str_pad(
-                $value,
-                $column['width'],
-                ' ',
-                $shouldAlignRight ? STR_PAD_LEFT : STR_PAD_RIGHT
-            ).' ';
-        }
-
-        return '|'.implode('|', $segments).'|';
-    }
-
-    private function tableColumns(): array
-    {
-        return [
-            ['key' => 'no', 'heading' => 'No', 'width' => 3],
-            ['key' => 'booking_date', 'heading' => 'Tanggal', 'width' => 10],
-            ['key' => 'time_slot', 'heading' => 'Jam', 'width' => 13],
-            ['key' => 'customer_name', 'heading' => 'Pelanggan', 'width' => 12],
-            ['key' => 'court_name', 'heading' => 'Lapangan', 'width' => 10],
-            ['key' => 'sport_name', 'heading' => 'Olahraga', 'width' => 9],
-            ['key' => 'payment_method', 'heading' => 'Metode', 'width' => 8],
-            ['key' => 'total_booking_amount', 'heading' => 'Total', 'width' => 10, 'align' => 'right'],
-            ['key' => 'paid_amount', 'heading' => 'Dibayar', 'width' => 10, 'align' => 'right'],
-            ['key' => 'remaining_amount', 'heading' => 'Sisa', 'width' => 10, 'align' => 'right'],
-            ['key' => 'payment_status', 'heading' => 'Status Pembayaran', 'width' => 18],
-            ['key' => 'status', 'heading' => 'Status Pemesanan', 'width' => 16],
-        ];
-    }
-
     private function excelColumns(): array
     {
         return [
@@ -451,11 +341,4 @@ class ReportController extends Controller
         };
     }
 
-    private function formatPdfEmptyRow(string $message): string
-    {
-        return sprintf(
-            '| %-'.(strlen($this->tableSeparator()) - 4).'s |',
-            $this->fitText($message, strlen($this->tableSeparator()) - 4)
-        );
-    }
 }

@@ -13,7 +13,10 @@ class SimpleExcelService
     ): string {
         $columnCount = max(count($columns), 1);
         $mergeAcross = $columnCount - 1;
-        $headerRowIndex = count($metadataRows) + 3;
+        $headerRowIndex = count($metadataRows) + 4;
+        $metaValueMerge = min(max($columnCount - 2, 0), 4);
+        $summaryMerge = min(max($columnCount - 1, 0), 4);
+        $summaryValueMerge = min(max($columnCount - 2, 0), 3);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
         $xml .= '<?mso-application progid="Excel.Sheet"?>'."\n";
@@ -31,15 +34,16 @@ class SimpleExcelService
         }
 
         $xml .= '<Row ss:Height="30">'.$this->cell($title, 'String', 'Title', $mergeAcross).'</Row>'."\n";
+        $xml .= '<Row ss:Height="8"/>'."\n";
 
         foreach ($metadataRows as $metadata) {
             $xml .= '<Row ss:Height="22">';
             $xml .= $this->cell((string) ($metadata['label'] ?? ''), 'String', 'MetaLabel');
-            $xml .= $this->cell((string) ($metadata['value'] ?? ''), 'String', 'MetaValue', max($columnCount - 2, 0));
+            $xml .= $this->cell((string) ($metadata['value'] ?? ''), 'String', 'MetaValue', $metaValueMerge);
             $xml .= '</Row>'."\n";
         }
 
-        $xml .= '<Row ss:Height="8"/>'."\n";
+        $xml .= '<Row ss:Height="12"/>'."\n";
         $xml .= '<Row ss:Height="34">';
 
         foreach ($columns as $column) {
@@ -66,8 +70,8 @@ class SimpleExcelService
             }
         }
 
-        $xml .= '<Row ss:Height="8"/>'."\n";
-        $xml .= '<Row ss:Height="24">'.$this->cell('Ringkasan', 'String', 'SummaryTitle', $mergeAcross).'</Row>'."\n";
+        $xml .= '<Row ss:Height="12"/>'."\n";
+        $xml .= '<Row ss:Height="24">'.$this->cell('Ringkasan', 'String', 'SummaryTitle', $summaryMerge).'</Row>'."\n";
 
         foreach ($summaryRows as $summary) {
             $xml .= '<Row ss:Height="23">';
@@ -76,7 +80,7 @@ class SimpleExcelService
                 $summary['value'] ?? '',
                 $summary['type'] ?? 'String',
                 ($summary['style'] ?? null) === 'Currency' ? 'SummaryCurrency' : 'SummaryValue',
-                max($columnCount - 2, 0)
+                $summaryValueMerge
             );
             $xml .= '</Row>'."\n";
         }
