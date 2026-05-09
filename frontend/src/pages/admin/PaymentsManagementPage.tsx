@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { PriceInput } from '../../components/ui/PriceInput';
 import { PaymentProofPreview } from '../../components/PaymentProofPreview';
 import { calculateDpAmount, calculateTimeDurationHours, formatCurrency, formatDateTime } from '../../lib/utils';
 import { Search, Eye, CheckCircle, Clock, Wallet, MessageCircle } from 'lucide-react';
@@ -522,8 +523,7 @@ export function PaymentsManagementPage() {
                   <p className="text-sm text-muted-foreground">
                     Jika uang yang masuk kurang dari total tagihan, isi total uang yang benar-benar sudah diterima sampai sekarang. Sistem akan menghitung kekurangannya secara otomatis.
                   </p>
-                  <Input
-                    type="number"
+                  <PriceInput
                     label="Total Uang yang Masuk"
                     value={receivedAmount}
                     onChange={(e) => {
@@ -559,8 +559,7 @@ export function PaymentsManagementPage() {
                   <p className="text-sm text-muted-foreground">
                     Gunakan form ini saat pelanggan sudah transfer tambahan atau membayar sisa tagihan langsung di lapangan.
                   </p>
-                  <Input
-                    type="number"
+                  <PriceInput
                     label="Nominal Tambahan"
                     value={settlementAmount}
                     onChange={(e) => setSettlementAmount(e.target.value)}

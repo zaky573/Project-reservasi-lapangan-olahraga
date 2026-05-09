@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PriceInput } from '../../components/ui/PriceInput';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { Court } from '../../data/mockData';
@@ -200,83 +201,107 @@ export function CourtsManagementPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingCourt ? 'Edit Lapangan' : 'Tambah Lapangan'}
-        size="lg"
+        size="xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1.5 text-foreground">Olahraga</label>
-              <select
-                value={formData.sport_id}
-                onChange={(e) => {
-                  const sportId = e.target.value;
-                  setFormData({
-                    ...formData,
-                    sport_id: sportId,
-                    code: editingCourt ? formData.code : generateCourtCode(sportId),
-                  });
-                }}
-                className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+        <form onSubmit={handleSubmit} className="space-y-6 p-2">
+          {/* Section Informasi Dasar */}
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
+              <div className="w-1 h-4 bg-primary rounded mr-2"></div>
+              Informasi Dasar
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Olahraga</label>
+                  <select
+                    value={formData.sport_id}
+                    onChange={(e) => {
+                      const sportId = e.target.value;
+                      setFormData({
+                        ...formData,
+                        sport_id: sportId,
+                        code: editingCourt ? formData.code : generateCourtCode(sportId),
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                    required
+                  >
+                    <option value="">Pilih Olahraga</option>
+                    {sports.map((sport) => (
+                      <option key={sport.id} value={sport.id}>
+                        {sport.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Input
+                  label="Kode Lapangan"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  placeholder="Otomatis dari olahraga"
+                  disabled={!editingCourt}
+                  required
+                />
+                <Input
+                  label="Nama Lapangan"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Contoh: Lapangan A1"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Detail Lapangan */}
+          <div>
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center">
+              <div className="w-1 h-4 bg-primary rounded mr-2"></div>
+              Detail Lapangan
+            </h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <PriceInput
+                    label="Harga per Jam"
+                    value={formData.price_per_hour}
+                    onChange={(e) => setFormData({ ...formData, price_per_hour: e.target.value })}
+                    min="0"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    className="w-full px-3 py-2.5 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                  >
+                    <option value="active" className="bg-background">✓ Aktif</option>
+                    <option value="inactive" className="bg-background">✗ Tidak Aktif</option>
+                    <option value="maintenance" className="bg-background">⚙ Pemeliharaan</option>
+                  </select>
+                </div>
+              </div>
+              <Input
+                label="Deskripsi"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Keterangan singkat tentang lapangan"
                 required
-              >
-                <option value="">Pilih Olahraga</option>
-                {sports.map((sport) => (
-                  <option key={sport.id} value={sport.id}>
-                    {sport.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label="Kode Lapangan"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              placeholder="Otomatis dari kode olahraga"
-              disabled={!editingCourt}
-              required
-            />
-          </div>
-          <Input
-            label="Nama Lapangan"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Harga per Jam"
-              type="number"
-              value={formData.price_per_hour}
-              onChange={(e) => setFormData({ ...formData, price_per_hour: e.target.value })}
-              min="0"
-              placeholder="Contoh: 50000"
-              required
-            />
-            <div>
-              <label className="block text-sm mb-1.5 text-foreground">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-3 py-2 bg-input-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="active">Aktif</option>
-                <option value="inactive">Tidak Aktif</option>
-                <option value="maintenance">Pemeliharaan</option>
-              </select>
+              />
             </div>
           </div>
-          <Input
-            label="Deskripsi"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            required
-          />
-          <div className="flex justify-end space-x-3 pt-4">
+
+          {/* Button Actions */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-border">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
               Batal
             </Button>
             <Button type="submit" variant="primary">
-              {editingCourt ? 'Perbarui' : 'Tambah'}
+              {editingCourt ? '✓ Perbarui Lapangan' : '+ Tambah Lapangan'}
             </Button>
           </div>
         </form>
