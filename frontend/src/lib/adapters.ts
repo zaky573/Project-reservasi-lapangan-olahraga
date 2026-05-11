@@ -82,6 +82,7 @@ export function mapSport(item: any): Sport {
 export function mapCourt(item: any): Court {
   const sportName = normalizeName(item?.sport?.name || item?.sport_name || 'Olahraga');
   const meta = sportMeta(sportName);
+  const image = asString(item?.image ?? item?.sport?.image, meta.image);
 
   return {
     id: asString(item?.id_court ?? item?.id),
@@ -91,7 +92,7 @@ export function mapCourt(item: any): Court {
     price_per_hour: asNumber(item?.price_per_hour),
     status: item?.status || 'active',
     description: asString(item?.description, `Lapangan ${item?.name || ''}`.trim()),
-    image: asString(item?.image, meta.image),
+    image: buildStorageUrl(image) || meta.image,
     created_at: asString(item?.created_at, DEFAULT_DATE),
   };
 }

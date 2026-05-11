@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/Card';
@@ -7,7 +8,11 @@ import { MapPin, Clock } from 'lucide-react';
 
 export function CourtsPage() {
   const { sportId } = useParams();
-  const { sports, courts } = useAuth();
+  const { sports, courts, refreshPublicData } = useAuth();
+
+  useEffect(() => {
+    refreshPublicData();
+  }, []);
 
   const sport = sports.find((s) => s.id === sportId);
   const sportCourts = courts.filter((c) => c.sport_id === sportId);

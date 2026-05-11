@@ -36,6 +36,7 @@ export interface Court {
   status: CourtStatus;
   description: string;
   image: string;
+  image_file?: File | null;
   created_at: string;
 }
 

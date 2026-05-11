@@ -1,10 +1,15 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/Card';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ImageIcon } from 'lucide-react';
 
 export function SportsPage() {
-  const { sports, courts } = useAuth();
+  const { sports, courts, refreshPublicData } = useAuth();
+
+  useEffect(() => {
+    refreshPublicData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,20 +27,39 @@ export function SportsPage() {
 
             return (
               <Link key={sport.id} to={`/sports/${sport.id}/courts`}>
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-5xl">{sport.icon}</div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-foreground">{sport.name}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">{sport.description}</p>
-                          <p className="text-sm text-secondary mt-2 font-medium">
-                            {courtCount} lapangan tersedia
-                          </p>
-                        </div>
+                <Card className="h-full hover:shadow-lg transition-shadow">
+                  <div className="relative h-44 bg-muted">
+                    {sport.image ? (
+                      <img
+                        src={sport.image}
+                        alt={sport.name}
+                        onError={(event) => {
+                          if (!event.currentTarget.src.includes('/images/hero-background.jpg')) {
+                            event.currentTarget.src = '/images/hero-background.jpg';
+                          }
+                        }}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <ImageIcon className="h-10 w-10" />
                       </div>
-                      <ChevronRight className="w-6 h-6 text-muted-foreground" />
+                    )}
+                    <div className="absolute left-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg bg-background/90 text-2xl shadow-sm">
+                      {sport.icon}
+                    </div>
+                  </div>
+
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="text-xl font-semibold text-foreground">{sport.name}</h3>
+                        <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{sport.description}</p>
+                        <p className="text-sm text-secondary mt-3 font-medium">
+                          {courtCount} lapangan tersedia
+                        </p>
+                      </div>
+                      <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
                     </div>
                   </CardContent>
                 </Card>

@@ -99,6 +99,29 @@ Route::get('/sport-images/{path}', function (string $path) {
     ]);
 })->where('path', '.*');
 
+Route::get('/court-images/{path}', function (string $path) {
+    if (str_contains($path, '..') || str_starts_with($path, '/') || str_starts_with($path, '\\')) {
+        abort(404);
+    }
+
+    $path = 'court_images/'.ltrim($path, '/\\');
+    $disk = Storage::disk('public');
+
+    if (! $disk->exists($path)) {
+        abort(404);
+    }
+
+    $fullPath = $disk->path($path);
+
+    if (! is_file($fullPath)) {
+        abort(404);
+    }
+
+    return response()->file($fullPath, [
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*');
+
 Route::get('/{any?}', function () {
     $reactIndex = public_path('app/index.html');
 

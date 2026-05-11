@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\Sport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CourtController extends Controller
 {
@@ -43,12 +44,16 @@ class CourtController extends Controller
                 'price_per_hour' => $court->price_per_hour,
                 'status' => $court->status,
                 'description' => $court->description,
+                'image' => $court->image,
                 'created_at' => $court->created_at,
                 'updated_at' => $court->updated_at,
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
                     'code' => $court->sport->code,
+                    'icon' => $court->sport->icon,
+                    'description' => $court->sport->description,
+                    'image' => $court->sport->image,
                 ] : null,
             ];
         });
@@ -81,12 +86,16 @@ class CourtController extends Controller
                 'price_per_hour' => $court->price_per_hour,
                 'status' => $court->status,
                 'description' => $court->description,
+                'image' => $court->image,
                 'created_at' => $court->created_at,
                 'updated_at' => $court->updated_at,
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
                     'code' => $court->sport->code,
+                    'icon' => $court->sport->icon,
+                    'description' => $court->sport->description,
+                    'image' => $court->sport->image,
                 ] : null,
             ],
         ]);
@@ -102,9 +111,14 @@ class CourtController extends Controller
             'price_per_hour' => 'required|numeric',
             'status' => 'required|in:active,inactive,maintenance',
             'description' => 'nullable',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $validated['code'] = $validated['code'] ?: $this->generateCourtCode((int) $validated['sport_id']);
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('court_images', 'public');
+        }
 
         $court = Court::create($validated);
         $court->load('sport');
@@ -119,12 +133,16 @@ class CourtController extends Controller
                 'price_per_hour' => $court->price_per_hour,
                 'status' => $court->status,
                 'description' => $court->description,
+                'image' => $court->image,
                 'created_at' => $court->created_at,
                 'updated_at' => $court->updated_at,
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
                     'code' => $court->sport->code,
+                    'icon' => $court->sport->icon,
+                    'description' => $court->sport->description,
+                    'image' => $court->sport->image,
                 ] : null,
             ],
         ], 201);
@@ -149,9 +167,20 @@ class CourtController extends Controller
             'price_per_hour' => 'required|numeric',
             'status' => 'required|in:active,inactive,maintenance',
             'description' => 'nullable',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $validated['code'] = $validated['code'] ?: $this->generateCourtCode((int) $validated['sport_id'], (int) $id);
+
+        if ($request->hasFile('image')) {
+            if ($court->image && str_starts_with($court->image, 'court_images/')) {
+                Storage::disk('public')->delete($court->image);
+            }
+
+            $validated['image'] = $request->file('image')->store('court_images', 'public');
+        } else {
+            unset($validated['image']);
+        }
 
         $court->update($validated);
         $court->load('sport');
@@ -166,12 +195,16 @@ class CourtController extends Controller
                 'price_per_hour' => $court->price_per_hour,
                 'status' => $court->status,
                 'description' => $court->description,
+                'image' => $court->image,
                 'created_at' => $court->created_at,
                 'updated_at' => $court->updated_at,
                 'sport' => $court->sport ? [
                     'id' => $court->sport->id,
                     'name' => $court->sport->name,
                     'code' => $court->sport->code,
+                    'icon' => $court->sport->icon,
+                    'description' => $court->sport->description,
+                    'image' => $court->sport->image,
                 ] : null,
             ],
         ]);
@@ -187,6 +220,10 @@ class CourtController extends Controller
                 'status' => false,
                 'message' => 'Lapangan tidak ditemukan',
             ], 404);
+        }
+
+        if ($court->image && str_starts_with($court->image, 'court_images/')) {
+            Storage::disk('public')->delete($court->image);
         }
 
         $court->delete();

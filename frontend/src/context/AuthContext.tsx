@@ -60,6 +60,7 @@ interface AuthContextType {
   verifyPasswordResetOtp: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
   resetPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   refreshData: () => Promise<void>;
+  refreshPublicData: () => Promise<void>;
   fetchSchedule: (courtId: string, date: string) => Promise<TimeSlot[]>;
   createBookingWithPayment: (payload: BookingPaymentPayload) => Promise<{ booking: Booking; payment: Payment }>;
   submitPaymentDetail: (
@@ -245,6 +246,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadProtectedData();
   };
 
+  const refreshPublicData = async () => {
+    await loadPublicData();
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -287,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = mapUser(response.data.user);
 
       persistAuth(user, token);
+      await loadPublicData();
       await loadProtectedData(user);
       return true;
     } catch (error) {
@@ -356,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = mapUser(response.data.user);
 
       persistAuth(user, response.data.token);
+      await loadPublicData();
       await loadProtectedData(user);
 
       return {
@@ -695,6 +702,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyPasswordResetOtp,
         resetPassword,
         refreshData,
+        refreshPublicData,
         fetchSchedule,
         createBookingWithPayment,
         submitPaymentDetail,

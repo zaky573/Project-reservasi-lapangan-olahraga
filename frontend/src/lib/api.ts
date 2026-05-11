@@ -75,6 +75,11 @@ export function buildStorageUrl(path?: string | null) {
     return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/sport-images/${imagePath}` : `/sport-images/${imagePath}`;
   }
 
+  if (publicPath.startsWith('court_images/')) {
+    const imagePath = publicPath.replace(/^court_images\//, '');
+    return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/court-images/${imagePath}` : `/court-images/${imagePath}`;
+  }
+
   const storagePath = cleanPath.startsWith('storage/') ? cleanPath : `storage/${cleanPath}`;
 
   return BACKEND_ORIGIN ? `${BACKEND_ORIGIN}/${storagePath}` : `/${storagePath}`;
