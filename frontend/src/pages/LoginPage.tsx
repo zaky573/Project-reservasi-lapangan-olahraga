@@ -92,10 +92,7 @@ export function LoginPage() {
             </p>
           </div>
 
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg text-xs space-y-2">
-            <p className="font-medium text-foreground">Akun masuk mengikuti data di database Laravel.</p>
-            <p>Jalankan backend terlebih dahulu sebelum mencoba masuk.</p>
-          </div>
+          
         </CardContent>
       </Card>
     </div>
