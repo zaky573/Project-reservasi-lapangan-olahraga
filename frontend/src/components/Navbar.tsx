@@ -23,12 +23,12 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             {currentUser ? (
               <>
-                <Link to={currentUser.role === 'user' ? '/sports' : '/dashboard'}>
-                  <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">
-                    <Home className="w-4 h-4 mr-2" />
-                    {currentUser.role === 'user' ? 'Pemesanan' : 'Dasbor'}
-                  </Button>
-                </Link>
+                  <Link to={currentUser.role === 'user' ? '/sports' : '/dashboard'}>
+                    <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10 ">
+                      <Home className="w-4 h-4 mr-2" />
+                      {currentUser.role === 'user' ? 'Pemesanan' : 'Dasbor'}
+                    </Button>
+                  </Link>
                 {currentUser.role === 'user' && (
                   <Link to="/my-bookings">
                     <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10">

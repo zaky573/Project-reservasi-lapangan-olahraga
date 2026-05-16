@@ -37,8 +37,6 @@ export function BookingSuccessPage() {
         return <Badge variant="warning">Menunggu</Badge>;
       case 'pembayaran_awal':
         return <Badge variant="info">Pembayaran Awal</Badge>;
-      case 'verifikasi_pembayaran_sisa':
-        return <Badge variant="warning">Verifikasi Pembayaran Sisa</Badge>;
       default:
         return null;
     }

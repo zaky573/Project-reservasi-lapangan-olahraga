@@ -42,8 +42,11 @@ class DashboardController extends Controller
 
             'payments' => [
                 'menunggu' => Payment::where('payment_status', 'menunggu')->count(),
-                'pembayaran_awal' => Payment::where('payment_status', 'pembayaran_awal')->count(),
-                'verifikasi_pembayaran_sisa' => Payment::where('payment_status', 'verifikasi_pembayaran_sisa')->count(),
+                'pembayaran_awal' => Payment::whereIn('payment_status', [
+                    'pembayaran_awal',
+                    'verifikasi_pembayaran_sisa',
+                    'menunggu_pelunasan_lokasi',
+                ])->count(),
                 'lunas' => Payment::where('payment_status', 'lunas')->count(),
             ],
 

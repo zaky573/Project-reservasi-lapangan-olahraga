@@ -324,7 +324,8 @@ class ReportController extends Controller
         return match ($status) {
             'menunggu' => 'Menunggu',
             'pembayaran_awal' => 'Pembayaran Awal',
-            'verifikasi_pembayaran_sisa' => 'Verif. Bayar Sisa',
+            'verifikasi_pembayaran_sisa' => 'Pembayaran Awal',
+            'menunggu_pelunasan_lokasi' => 'Pembayaran Awal',
             'lunas' => 'Lunas',
             default => $status ? ucwords(str_replace('_', ' ', $status)) : '-',
         };

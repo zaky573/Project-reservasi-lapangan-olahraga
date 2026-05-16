@@ -4,6 +4,7 @@ use App\Mail\SendMail;
 use App\Models\PendingRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -121,6 +122,31 @@ Route::get('/court-images/{path}', function (string $path) {
         'Cache-Control' => 'public, max-age=86400',
     ]);
 })->where('path', '.*');
+
+Route::get('/deploy/{action}', function (Request $request, string $action) {
+    abort_unless((bool) env('DEPLOY_ROUTES_ENABLED', false), 404);
+    abort_unless(hash_equals((string) env('DEPLOY_TOKEN'), (string) $request->query('token')), 403);
+
+    $commands = [
+        'migrate' => ['migrate', ['--force' => true]],
+        'seed' => ['db:seed', ['--force' => true]],
+        'migrate-seed' => ['migrate', ['--force' => true, '--seed' => true]],
+        'cache-clear' => ['optimize:clear', []],
+        'storage-link' => ['storage:link', []],
+    ];
+
+    abort_unless(isset($commands[$action]), 404);
+
+    [$command, $parameters] = $commands[$action];
+    $exitCode = Artisan::call($command, $parameters);
+
+    return response()->json([
+        'ok' => $exitCode === 0,
+        'action' => $action,
+        'exit_code' => $exitCode,
+        'output' => Artisan::output(),
+    ]);
+});
 
 Route::get('/{any?}', function () {
     $reactIndex = public_path('app/index.html');

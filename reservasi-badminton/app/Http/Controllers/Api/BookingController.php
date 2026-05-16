@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Court;
+use App\Models\Payment;
 use App\Services\BookingPaymentStatusService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
@@ -26,6 +28,9 @@ class BookingController extends Controller
             'customer_name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'notes' => 'nullable|string',
+            'payment_method' => 'nullable|in:transfer,cash',
+            'amount' => 'required_with:payment_method|numeric|min:0.01',
+            'proof_file' => 'required_with:payment_method|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         $court = Court::with('sport')->find($validated['court_id']);
@@ -129,21 +134,49 @@ class BookingController extends Controller
             ], 409);
         }
 
-        $booking = Booking::create([
-            'user_id' => $request->user()->id,
-            'court_id' => $validated['court_id'],
-            'booking_date' => $validated['booking_date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
-            'total_hours' => $totalHours,
-            'customer_name' => $validated['customer_name'],
-            'phone' => $validated['phone'],
-            'total_price' => $totalPrice,
-            'status' => 'dibooking',
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        $booking = DB::transaction(function () use ($request, $validated, $totalHours, $totalPrice) {
+            $booking = Booking::create([
+                'user_id' => $request->user()->id,
+                'court_id' => $validated['court_id'],
+                'booking_date' => $validated['booking_date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'total_hours' => $totalHours,
+                'customer_name' => $validated['customer_name'],
+                'phone' => $validated['phone'],
+                'total_price' => $totalPrice,
+                'status' => 'dibooking',
+                'notes' => $validated['notes'] ?? null,
+            ]);
 
-        $booking->load(['court.sport', 'user']);
+            if ($request->hasFile('proof_file')) {
+                $proofPath = $request->file('proof_file')->store('payment_proofs', 'public');
+                $paymentAmount = (float) $validated['amount'];
+
+                $payment = Payment::create([
+                    'booking_id' => $booking->id,
+                    'amount' => $totalPrice,
+                    'paid_amount' => 0,
+                    'remaining_amount' => $totalPrice,
+                    'payment_method' => $validated['payment_method'],
+                    'proof_file' => $proofPath,
+                    'payment_status' => 'menunggu',
+                ]);
+
+                $payment->details()->create([
+                    'amount' => $paymentAmount,
+                    'verified_amount' => 0,
+                    'payment_method' => $validated['payment_method'],
+                    'proof_file' => $proofPath,
+                    'status' => 'menunggu',
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
+
+            return $booking;
+        });
+
+        $booking->load(['court.sport', 'user', 'payment.details.verifiedBy']);
 
         return response()->json([
             'status' => true,
@@ -191,22 +224,36 @@ class BookingController extends Controller
                 'email' => $booking->user->email,
                 'phone' => $booking->user->phone,
             ] : null,
-            'payment' => $booking->payment ? [
-                'id_payment' => $booking->payment->id,
-                'payment_method' => $booking->payment->payment_method,
-                'payment_status' => $booking->payment->payment_status,
-                'total_amount' => $booking->payment->amount,
-                'paid_amount' => $booking->payment->paid_amount,
-                'remaining_amount' => $booking->payment->remaining_amount,
-                'remaining_notice' => $this->buildRemainingNotice($booking->payment),
-                'paid_at' => $booking->payment->paid_at,
-                'payment_details' => $booking->payment->details
-                    ->sortByDesc('created_at')
-                    ->values()
-                    ->map(fn ($detail) => $this->formatPaymentDetail($detail)),
-            ] : null,
+            'payment' => $booking->payment ? $this->formatPayment($booking->payment) : null,
             'created_at' => $booking->created_at,
             'updated_at' => $booking->updated_at,
+        ];
+    }
+
+    private function formatPayment($payment)
+    {
+        $payment->loadMissing(['details.verifiedBy']);
+        $pendingDetail = $payment->details
+            ->sortByDesc('created_at')
+            ->first(fn ($detail) => in_array($detail->status, ['menunggu', 'menunggu_pelunasan_lokasi'], true));
+
+        return [
+            'id_payment' => $payment->id,
+            'payment_method' => $payment->payment_method,
+            'payment_status' => $payment->payment_status,
+            'total_amount' => $payment->amount,
+            'paid_amount' => $payment->paid_amount,
+            'remaining_amount' => $payment->remaining_amount,
+            'remaining_notice' => $this->buildRemainingNotice($payment),
+            'proof_file' => $payment->proof_file,
+            'pending_detail' => $pendingDetail ? $this->formatPaymentDetail($pendingDetail) : null,
+            'pending_amount' => $pendingDetail?->amount,
+            'pending_proof_file' => $pendingDetail?->proof_file,
+            'paid_at' => $payment->paid_at,
+            'payment_details' => $payment->details
+                ->sortByDesc('created_at')
+                ->values()
+                ->map(fn ($detail) => $this->formatPaymentDetail($detail)),
         ];
     }
 
@@ -332,10 +379,54 @@ class BookingController extends Controller
     // PUT /api/bookings/{id} (admin)
     public function update(Request $request, $id)
     {
+        $validated = $request->validate([
+            'status' => 'required|in:dibatalkan',
+        ]);
+
+        $booking = Booking::with(['court.sport', 'user', 'payment.details.verifiedBy'])->find($id);
+
+        if (! $booking) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pemesanan tidak ditemukan',
+            ], 404);
+        }
+
+        if (in_array($booking->status, ['selesai', 'completed'], true)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pemesanan yang sudah selesai tidak dapat dibatalkan.',
+            ], 422);
+        }
+
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $bookingStartAt = Carbon::parse($booking->booking_date.' '.$booking->start_time, $timezone);
+
+        if (Carbon::now($timezone)->greaterThanOrEqualTo($bookingStartAt)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pemesanan tidak dapat dibatalkan karena sudah masuk jam main atau sudah kadaluarsa.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($booking, $validated) {
+            if ($booking->payment) {
+                $booking->payment->details()->delete();
+                $booking->payment()->delete();
+            }
+
+            $booking->forceFill([
+                'status' => $validated['status'],
+            ])->save();
+        });
+
+        $booking = $booking->fresh(['court.sport', 'user', 'payment.details.verifiedBy']);
+
         return response()->json([
-            'status' => false,
-            'message' => 'Status pemesanan diubah otomatis oleh sistem pembayaran dan jadwal.',
-        ], 403);
+            'status' => true,
+            'message' => 'Pemesanan berhasil dibatalkan',
+            'data' => $this->formatBooking($booking),
+        ]);
     }
 
     // DELETE /api/bookings/{id} (admin)

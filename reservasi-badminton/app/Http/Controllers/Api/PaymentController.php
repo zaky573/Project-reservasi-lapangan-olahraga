@@ -26,20 +26,13 @@ class PaymentController extends Controller
             'proof_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
-        $booking = Booking::with('payment.details')->find($bookingId);
+        $booking = $this->resolveBookingForPaymentRequest($request, $bookingId);
 
         if (! $booking) {
             return response()->json([
                 'status' => false,
                 'message' => 'Pemesanan tidak ditemukan',
             ], 404);
-        }
-
-        if ($booking->user_id !== $request->user()->id) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Tidak punya akses',
-            ], 403);
         }
 
         $this->ensureBookingCanBePaid($booking);
@@ -90,7 +83,7 @@ class PaymentController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $booking = Booking::with('payment.details')->find($bookingId);
+        $booking = $this->resolveBookingForPaymentRequest($request, $bookingId);
 
         if (! $booking) {
             return response()->json([
@@ -99,16 +92,9 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        if ($booking->user_id !== $request->user()->id) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Tidak punya akses ke pemesanan ini',
-            ], 403);
-        }
-
-        $this->ensureBookingCanBePaid($booking);
-
         $payment = $this->resolvePaymentForBooking($booking, $validated['payment_method']);
+        $this->ensureBookingCanReceivePaymentDetail($booking, $payment, $validated['payment_method']);
+
         $remainingAmount = (float) $payment->remaining_amount;
 
         if ($remainingAmount <= 0) {
@@ -118,13 +104,43 @@ class PaymentController extends Controller
             ], 422);
         }
 
+        if ($payment->details()->where('status', 'menunggu')->exists()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pengajuan pembayaran sebelumnya masih menunggu verifikasi admin',
+            ], 422);
+        }
+
         $submittedAmount = (float) $validated['amount'];
+
         $this->ensureSubmittedAmountWithinRemaining($submittedAmount, $remainingAmount);
 
         $proofPath = null;
 
         if ($request->hasFile('proof_file')) {
             $proofPath = $request->file('proof_file')->store('payment_proofs', 'public');
+        }
+
+        if ($validated['payment_method'] === 'cash') {
+            $payment->details()->create([
+                'amount' => $submittedAmount,
+                'verified_amount' => 0,
+                'payment_method' => 'cash',
+                'proof_file' => null,
+                'status' => 'menunggu',
+                'notes' => $validated['notes'] ?? 'Sisa pembayaran akan dibayar tunai saat datang ke lapangan.',
+            ]);
+
+            $payment->update([
+                'payment_status' => 'menunggu',
+                'paid_at' => null,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Pilihan bayar tunai saat datang berhasil dicatat',
+                'data' => $this->formatPayment($payment->fresh(['booking', 'details.verifiedBy'])),
+            ], 201);
         }
 
         $payment->details()->create([
@@ -191,6 +207,8 @@ class PaymentController extends Controller
         $payments = Payment::with(['booking.court.sport', 'booking.user', 'details.verifiedBy'])
             ->latest()
             ->get()
+            ->filter(fn ($payment) => $this->shouldShowInPaymentQueue($payment))
+            ->values()
             ->map(function ($payment) {
                 return $this->formatPayment($payment, true);
             });
@@ -202,10 +220,25 @@ class PaymentController extends Controller
         ]);
     }
 
+    private function shouldShowInPaymentQueue(Payment $payment): bool
+    {
+        if (! $payment->booking) {
+            return false;
+        }
+
+        return ! in_array($payment->booking->status, [
+            'dibatalkan',
+            'cancelled',
+            'sedang_digunakan',
+            'selesai',
+            'completed',
+        ], true);
+    }
+
     public function verify(Request $request, $id)
     {
         $request->validate([
-            'payment_status' => 'nullable|in:pembayaran_awal,verifikasi_pembayaran_sisa,lunas',
+            'payment_status' => 'nullable|in:pembayaran_awal,lunas',
             'paid_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
@@ -219,9 +252,7 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        $allowedStatuses = $payment->payment_method === 'cash'
-            ? ['pembayaran_awal', 'verifikasi_pembayaran_sisa', 'lunas']
-            : ['verifikasi_pembayaran_sisa', 'lunas'];
+        $allowedStatuses = ['pembayaran_awal', 'lunas'];
 
         if ($request->payment_status && ! in_array($request->payment_status, $allowedStatuses, true)) {
             throw ValidationException::withMessages([
@@ -230,7 +261,7 @@ class PaymentController extends Controller
         }
 
         if (
-            $request->payment_status === 'verifikasi_pembayaran_sisa'
+            $request->payment_status === 'pembayaran_awal'
             && $request->paid_amount === null
         ) {
             throw ValidationException::withMessages([
@@ -434,6 +465,9 @@ class PaymentController extends Controller
     private function formatPayment(Payment $payment, bool $includeFullBooking = false)
     {
         $payment->loadMissing(['details.verifiedBy']);
+        $pendingDetail = $payment->details
+            ->sortByDesc('created_at')
+            ->first(fn ($detail) => in_array($detail->status, ['menunggu', 'menunggu_pelunasan_lokasi'], true));
 
         return [
             'id_payment' => $payment->id,
@@ -445,6 +479,10 @@ class PaymentController extends Controller
             'payment_breakdown' => $this->buildPaymentBreakdown($payment),
             'proof_file' => $payment->proof_file,
             'payment_status' => $payment->payment_status,
+            'settlement_method' => $this->resolveSettlementMethod($payment),
+            'pending_detail' => $pendingDetail ? $this->formatPaymentDetail($pendingDetail) : null,
+            'pending_amount' => $pendingDetail?->amount,
+            'pending_proof_file' => $pendingDetail?->proof_file,
             'paid_at' => $payment->paid_at,
             'payment_details' => $payment->details
                 ->sortByDesc('created_at')
@@ -478,6 +516,13 @@ class PaymentController extends Controller
             'created_at' => $detail->created_at,
             'updated_at' => $detail->updated_at,
         ];
+    }
+
+    private function resolveSettlementMethod(Payment $payment): ?string
+    {
+        $payment->loadMissing('details');
+
+        return null;
     }
 
     private function formatPaymentBooking(Payment $payment, bool $includeFullBooking): array
@@ -636,6 +681,37 @@ class PaymentController extends Controller
 
     private function ensureBookingCanBePaid(Booking $booking): void
     {
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $endAt = Carbon::parse($booking->booking_date.' '.$booking->end_time, $timezone);
+        $isPastBooking = now($timezone)->greaterThanOrEqualTo($endAt);
+
+        if ($isPastBooking && in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
+            throw ValidationException::withMessages([
+                'booking' => ['Pemesanan sudah melewati jam selesai atau sudah dibatalkan, sehingga tidak bisa dibayar lagi.'],
+            ]);
+        }
+    }
+
+    private function ensureBookingCanReceivePaymentDetail(Booking $booking, Payment $payment, string $submittedMethod): void
+    {
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $endAt = Carbon::parse($booking->booking_date.' '.$booking->end_time, $timezone);
+        $isPastBooking = now($timezone)->greaterThanOrEqualTo($endAt);
+
+        if ($isPastBooking && in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
+            throw ValidationException::withMessages([
+                'booking' => ['Pemesanan sudah melewati jam selesai, sehingga tidak bisa dibayar lagi.'],
+            ]);
+        }
+
+        if ($payment->payment_method === 'cash' && $submittedMethod === 'transfer') {
+            $booking->forceFill([
+                'status' => 'dibooking',
+            ])->save();
+
+            return;
+        }
+
         if (in_array($booking->status, ['dibatalkan', 'selesai', 'cancelled', 'completed'], true)) {
             throw ValidationException::withMessages([
                 'booking' => ['Pemesanan tidak bisa dibayar.'],
@@ -658,6 +734,49 @@ class PaymentController extends Controller
 
         return $booking->user_id === $user->id
             || in_array($user->role, ['admin', 'super_admin'], true);
+    }
+
+    private function resolveBookingForPaymentRequest(Request $request, $bookingOrPaymentId): ?Booking
+    {
+        if (! is_numeric($bookingOrPaymentId)) {
+            return null;
+        }
+
+        $booking = Booking::with('payment.details')->find($bookingOrPaymentId);
+
+        if ($booking && $booking->user_id === $request->user()->id) {
+            return $booking;
+        }
+
+        $payment = Payment::with('booking.payment.details')
+            ->whereKey($bookingOrPaymentId)
+            ->whereHas('booking', function ($query) use ($request) {
+                $query->where('user_id', $request->user()->id);
+            })
+            ->first();
+
+        if ($payment?->booking) {
+            return $payment->booking;
+        }
+
+        $detail = PaymentDetail::with('payment.booking.payment.details')
+            ->whereKey($bookingOrPaymentId)
+            ->whereHas('payment.booking', function ($query) use ($request) {
+                $query->where('user_id', $request->user()->id);
+            })
+            ->first();
+
+        if ($detail?->payment?->booking) {
+            return $detail->payment->booking;
+        }
+
+        $latestBooking = Booking::with('payment.details')
+            ->where('user_id', $request->user()->id)
+            ->whereNotIn('status', ['dibatalkan', 'cancelled', 'selesai', 'completed'])
+            ->latest()
+            ->first();
+
+        return $latestBooking;
     }
 
     private function syncLatestDetailFromPaymentVerification(

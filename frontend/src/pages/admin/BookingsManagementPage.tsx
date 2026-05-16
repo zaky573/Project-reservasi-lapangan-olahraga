@@ -5,6 +5,13 @@ import { Badge } from '../../components/ui/Badge';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { Search } from 'lucide-react';
 
+const BOOKING_STATUS_FILTERS = [
+  { value: 'dibooking', label: 'Dipesan' },
+  { value: 'sedang_digunakan', label: 'Sedang Digunakan' },
+  { value: 'selesai', label: 'Selesai' },
+  { value: 'dibatalkan', label: 'Dibatalkan' },
+];
+
 export function BookingsManagementPage() {
   const { bookings, courts, payments } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +42,7 @@ export function BookingsManagementPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="mx-auto w-full max-w-7xl p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Manajemen Pemesanan</h1>
         <p className="text-muted-foreground mt-2">Kelola semua pemesanan lapangan</p>
@@ -60,9 +67,11 @@ export function BookingsManagementPage() {
               className="px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="all">Semua Status</option>
-              <option value="dibooking">Dipesan</option>
-              <option value="selesai">Selesai</option>
-              <option value="dibatalkan">Dibatalkan</option>
+              {BOOKING_STATUS_FILTERS.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
             </select>
           </div>
         </CardHeader>

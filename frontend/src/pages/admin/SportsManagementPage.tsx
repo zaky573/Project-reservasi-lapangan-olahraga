@@ -110,7 +110,7 @@ export function SportsManagementPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="mx-auto w-full max-w-7xl p-6 lg:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Manajemen Olahraga</h1>

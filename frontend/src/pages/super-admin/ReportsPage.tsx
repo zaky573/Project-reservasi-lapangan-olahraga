@@ -52,7 +52,8 @@ function statusLabel(status: string) {
     dibatalkan: 'Dibatalkan',
     menunggu: 'Menunggu',
     pembayaran_awal: 'Pembayaran Awal',
-    verifikasi_pembayaran_sisa: 'Verifikasi Pembayaran Sisa',
+    verifikasi_pembayaran_sisa: 'Pembayaran Awal',
+    menunggu_pelunasan_lokasi: 'Pembayaran Awal',
     lunas: 'Lunas',
   };
 
@@ -181,7 +182,7 @@ export function ReportsPage() {
     : 0;
 
   return (
-    <div className="p-8">
+    <div className="mx-auto w-full max-w-7xl p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Rekap Data</h1>
         <p className="text-muted-foreground mt-2">Pratinjau rekap pemesanan selesai dan dibatalkan sebelum diunduh sebagai Excel, Word, atau PDF</p>

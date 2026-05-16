@@ -10,9 +10,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('sports', function (Blueprint $table) {
-            $table->string('code', 10)->nullable()->after('name');
-        });
+        if (! Schema::hasColumn('sports', 'code')) {
+            Schema::table('sports', function (Blueprint $table) {
+                $table->string('code', 10)->nullable()->after('name');
+            });
+        }
 
         $usedCodes = [];
 
@@ -39,14 +41,25 @@ return new class extends Migration
 
                 DB::table('sports')
                     ->where('id', $sport->id)
+                    ->whereNull('code')
                     ->update(['code' => $code]);
             });
 
-        Schema::table('sports', function (Blueprint $table) {
-            $table->unique('code');
-        });
+        try {
+            Schema::table('sports', function (Blueprint $table) {
+                $table->unique('code');
+            });
+        } catch (\Throwable) {
+            // The migration may have been retried after the index was already created.
+        }
 
-        DB::statement('ALTER TABLE sports ALTER COLUMN code SET NOT NULL');
+        $driver = Schema::getConnection()->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            DB::statement('ALTER TABLE sports MODIFY code VARCHAR(10) NOT NULL');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE sports ALTER COLUMN code SET NOT NULL');
+        }
     }
 
     public function down(): void

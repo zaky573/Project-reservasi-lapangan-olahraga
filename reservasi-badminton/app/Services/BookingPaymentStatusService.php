@@ -10,8 +10,8 @@ class BookingPaymentStatusService
 {
     public const PAYMENT_MENUNGGU = 'menunggu';
     public const PAYMENT_PEMBAYARAN_AWAL = 'pembayaran_awal';
-    public const PAYMENT_VERIFIKASI_SISA = 'verifikasi_pembayaran_sisa';
     public const PAYMENT_LUNAS = 'lunas';
+    public const CASH_DP_PER_HOUR = 25000;
 
     public const BOOKING_DIBOOKING = 'dibooking';
     public const BOOKING_SEDANG_DIGUNAKAN = 'sedang_digunakan';
@@ -28,9 +28,10 @@ class BookingPaymentStatusService
             return $booking;
         }
 
-        $startAt = Carbon::parse($booking->booking_date.' '.$booking->start_time);
-        $endAt = Carbon::parse($booking->booking_date.' '.$booking->end_time);
-        $now = now();
+        $timezone = config('app.timezone', 'Asia/Jakarta');
+        $startAt = Carbon::parse($booking->booking_date.' '.$booking->start_time, $timezone);
+        $endAt = Carbon::parse($booking->booking_date.' '.$booking->end_time, $timezone);
+        $now = now($timezone);
         $isFullyPaid = $this->isFullyPaid($payment);
 
         if ($now->greaterThanOrEqualTo($endAt)) {
@@ -112,7 +113,6 @@ class BookingPaymentStatusService
             $requestedStatus
             && in_array($requestedStatus, [
                 self::PAYMENT_PEMBAYARAN_AWAL,
-                self::PAYMENT_VERIFIKASI_SISA,
                 self::PAYMENT_MENUNGGU,
             ], true)
         ) {
@@ -151,15 +151,16 @@ class BookingPaymentStatusService
             return self::PAYMENT_MENUNGGU;
         }
 
-        if ($payment->payment_method === 'cash') {
-            $minimumDp = round((float) $payment->amount * 0.25, 2);
+        return self::PAYMENT_PEMBAYARAN_AWAL;
+    }
 
-            return $paidAmount <= $minimumDp
-                ? self::PAYMENT_PEMBAYARAN_AWAL
-                : self::PAYMENT_VERIFIKASI_SISA;
-        }
+    private function resolveCashDpAmount(Payment $payment): float
+    {
+        $payment->loadMissing('booking');
 
-        return self::PAYMENT_VERIFIKASI_SISA;
+        $hours = max((float) ($payment->booking?->total_hours ?? 1), 1);
+
+        return min($hours * self::CASH_DP_PER_HOUR, (float) $payment->amount);
     }
 
     private function updatePaymentStatus(Payment $payment, string $status): void

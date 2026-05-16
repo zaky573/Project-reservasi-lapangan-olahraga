@@ -37,7 +37,7 @@ Route::get('/courts', [CourtController::class, 'index']);
 Route::get('/courts/{id}', [CourtController::class, 'show']);
 Route::get('/sports', [SportController::class, 'index']);
 
-/*
+/*   
 |--------------------------------------------------------------------------
 | Authenticated Routes (semua role yang sudah login)
 |--------------------------------------------------------------------------

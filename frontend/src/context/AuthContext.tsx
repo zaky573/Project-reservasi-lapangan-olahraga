@@ -78,7 +78,7 @@ interface AuthContextType {
   addBooking: (booking: Booking) => void;
   addPayment: (payment: Payment) => void;
   updatePayment: (paymentId: string, updates: Partial<Payment>) => void;
-  updateBooking: (bookingId: string, updates: Partial<Booking>) => void;
+  updateBooking: (bookingId: string, updates: Partial<Booking>) => Promise<{ success: boolean; message: string }>;
   addSport: (sport: Sport) => void;
   updateSport: (sportId: string, updates: Partial<Sport>) => void;
   deleteSport: (sportId: string) => void;
@@ -468,10 +468,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch((error) => console.warn(apiMessage(error, 'Gagal memperbarui pembayaran')));
   };
 
-  const updateBooking = (bookingId: string, updates: Partial<Booking>) => {
-    setBookings((currentBookings) =>
-      currentBookings.map((booking) => (booking.id === bookingId ? { ...booking, ...updates } : booking))
-    );
+  const updateBooking = async (bookingId: string, updates: Partial<Booking>) => {
+    try {
+      const response = await apiClient.put<ApiResponse<any>>(`/bookings/${bookingId}`, {
+        status: updates.status,
+      });
+      const booking = mapBooking(response.data);
+      const payment = mapPaymentFromBooking(response.data);
+
+      setBookings((currentBookings) => replaceById(currentBookings, booking));
+      setPayments((currentPayments) => payment
+        ? replaceById(currentPayments, payment)
+        : currentPayments.filter((currentPayment) => currentPayment.booking_id !== booking.id)
+      );
+
+      return {
+        success: true,
+        message: response.message || 'Pemesanan berhasil diperbarui.',
+      };
+    } catch (error) {
+      const message = apiMessage(error, 'Gagal memperbarui pemesanan');
+      console.warn(message);
+
+      return {
+        success: false,
+        message,
+      };
+    }
   };
 
   const addSport = (sport: Sport) => {
@@ -659,32 +682,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const createBookingWithPayment = async (payload: BookingPaymentPayload) => {
-    const bookingResponse = await apiClient.post<ApiResponse<any>>('/bookings', {
-      court_id: payload.court_id,
-      booking_date: payload.booking_date,
-      start_time: payload.start_time,
-      end_time: payload.end_time,
-      customer_name: payload.customer_name,
-      phone: payload.phone,
-      notes: payload.notes,
-    });
+    const formData = new FormData();
+    formData.append('court_id', payload.court_id);
+    formData.append('booking_date', payload.booking_date);
+    formData.append('start_time', payload.start_time);
+    formData.append('end_time', payload.end_time);
+    formData.append('customer_name', payload.customer_name);
+    formData.append('phone', payload.phone);
+    formData.append('payment_method', payload.payment_method);
+    formData.append('amount', String(payload.amount));
+
+    if (payload.notes) {
+      formData.append('notes', payload.notes);
+    }
+
+    if (payload.proof_file) {
+      formData.append('proof_file', payload.proof_file);
+    }
+
+    const bookingResponse = await apiClient.postForm<ApiResponse<any>>('/bookings', formData);
     const booking = mapBooking(bookingResponse.data);
-
-    await apiClient.post<ApiResponse<any>>(`/payments/${booking.id}`, {
-      payment_method: payload.payment_method,
-    });
-
-    const payment = await submitPaymentDetail(
-      booking.id,
-      payload.payment_method,
-      payload.amount,
-      payload.proof_file,
-      payload.notes
-    );
+    const paymentFromBooking = mapPaymentFromBooking(bookingResponse.data);
 
     setBookings((currentBookings) => replaceById(currentBookings, booking));
+    if (paymentFromBooking) {
+      setPayments((currentPayments) => replaceById(currentPayments, paymentFromBooking));
+    }
 
-    return { booking, payment };
+    return { booking, payment: paymentFromBooking as Payment };
   };
 
   return (

@@ -3,7 +3,7 @@ export type UserRole = 'user' | 'admin' | 'super_admin';
 export type CourtStatus = 'active' | 'inactive' | 'maintenance';
 export type SlotStatus = 'available' | 'booked' | 'maintenance' | 'expired';
 export type BookingStatus = 'dibooking' | 'sedang_digunakan' | 'selesai' | 'dibatalkan';
-export type PaymentStatus = 'menunggu' | 'pembayaran_awal' | 'verifikasi_pembayaran_sisa' | 'lunas';
+export type PaymentStatus = 'menunggu' | 'pembayaran_awal' | 'lunas' | 'menunggu_verifikasi_pembayaran_dp' | 'menunggu_verifikasi_pembayaran';
 export type PaymentMethod = 'cash' | 'transfer';
 export type SettlementMethod = 'transfer' | 'cash_at_venue';
 
@@ -69,6 +69,7 @@ export interface Payment {
   amount: number;
   paid_amount?: number;
   total_amount?: number;
+  remaining_amount?: number;
   method: PaymentMethod;
   status: PaymentStatus;
   proof_url?: string;

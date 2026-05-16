@@ -30,9 +30,9 @@ export function Sidebar() {
   if (currentUser?.role === 'user') return null;
 
   return (
-    <aside className="bg-sidebar w-64 min-h-screen border-r border-sidebar-border">
+    <aside className="sticky top-16 h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar">
       <div className="p-6">
-        <h2 className="text-sidebar-foreground text-xl font-bold">
+        <h2 className="truncate text-xl font-bold text-sidebar-foreground">
           {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Panel Admin'}
         </h2>
       </div>
@@ -45,14 +45,14 @@ export function Sidebar() {
               key={item.path}
               to={item.path}
               className={cn(
-                'flex items-center space-x-3 px-3 py-2.5 rounded-lg mb-1 transition-colors',
+                'mb-1 flex min-w-0 items-center space-x-3 rounded-lg px-3 py-2.5 transition-colors',
                 isActive
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
-              <Icon className="w-5 h-5" />
-              <span>{item.label}</span>
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}

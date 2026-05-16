@@ -137,9 +137,11 @@ export function mapPaymentStatus(status: string): Payment['status'] {
   switch (status) {
     case 'menunggu':
     case 'pembayaran_awal':
-    case 'verifikasi_pembayaran_sisa':
     case 'lunas':
       return status;
+    case 'verifikasi_pembayaran_sisa':
+    case 'menunggu_pelunasan_lokasi':
+      return 'pembayaran_awal';
     case 'sedang_digunakan':
       return 'lunas';
     case 'dibayar_sebagian':
@@ -175,30 +177,51 @@ export function mapBooking(item: any): Booking {
 
 export function mapPayment(item: any): Payment {
   const details = Array.isArray(item?.payment_details) ? item.payment_details : [];
-  const pendingDetail = details.find((detail: any) => detail?.status === 'menunggu' && detail?.proof_file);
+  const topLevelPendingDetail = item?.pending_detail;
+  const pendingTransferDetail = topLevelPendingDetail?.status === 'menunggu'
+    ? topLevelPendingDetail
+    : details.find((detail: any) => detail?.status === 'menunggu' && detail?.proof_file);
+  const pendingVenueDetail = topLevelPendingDetail?.status === 'menunggu_pelunasan_lokasi'
+    ? topLevelPendingDetail
+    : details.find((detail: any) => detail?.status === 'menunggu_pelunasan_lokasi');
+  const pendingDetail = pendingTransferDetail || pendingVenueDetail;
   const acceptedDetail = details.find((detail: any) => detail?.status === 'diterima' && detail?.proof_file);
+  const proofDetail = details.find((detail: any) => detail?.proof_file);
   const latestDetail = pendingDetail || acceptedDetail || details[0];
   const paidAmount = asNumber(item?.paid_amount);
   const totalAmount = asNumber(item?.total_amount ?? item?.amount);
+  const remainingAmount = asNumber(item?.remaining_amount);
   const submittedAmount = asNumber(latestDetail?.amount, paidAmount || totalAmount);
-  const status = mapPaymentStatus(asString(item?.payment_status ?? item?.status, 'menunggu'));
-  const displayAmount = status === 'lunas' || status === 'pembayaran_awal' || status === 'verifikasi_pembayaran_sisa'
+  const rawStatus = pendingTransferDetail || pendingVenueDetail
+      ? 'menunggu'
+      : asString(item?.payment_status ?? item?.status, 'menunggu');
+  const status = mapPaymentStatus(rawStatus);
+  const displayAmount = status === 'lunas' || status === 'pembayaran_awal'
     ? paidAmount || submittedAmount
     : submittedAmount;
-  const proofPath = acceptedDetail?.proof_file || (!pendingDetail ? latestDetail?.proof_file || item?.proof_file : undefined);
+  const proofPath = acceptedDetail?.proof_file || latestDetail?.proof_file || item?.proof_file || proofDetail?.proof_file;
 
   return {
     id: asString(item?.id_payment ?? item?.id),
-    booking_id: asString(item?.booking?.id_booking ?? item?.booking?.id ?? item?.booking_id),
+    booking_id: asString(
+      item?.booking_id ??
+      item?.id_booking ??
+      item?.booking?.id_booking ??
+      item?.booking?.id
+    ),
     amount: displayAmount,
     paid_amount: paidAmount,
     total_amount: totalAmount,
+    remaining_amount: remainingAmount,
     method: item?.payment_method || item?.method || 'transfer',
     status,
     proof_url: buildStorageUrl(proofPath),
     admin_note: asString(item?.remaining_notice || latestDetail?.notes || item?.admin_note, undefined as any),
-    pending_amount: status === 'menunggu' ? submittedAmount : undefined,
-    pending_proof_url: pendingDetail ? buildStorageUrl(pendingDetail.proof_file) : undefined,
+    settlement_method: item?.settlement_method || (pendingVenueDetail ? 'cash_at_venue' : undefined),
+    pending_amount: pendingDetail ? asNumber(item?.pending_amount, submittedAmount) : undefined,
+    pending_proof_url: pendingTransferDetail
+      ? buildStorageUrl(pendingTransferDetail.proof_file || item?.pending_proof_file)
+      : undefined,
     verified_by: asString(latestDetail?.verified_by?.id_user ?? latestDetail?.verified_by, undefined as any),
     verified_at: asString(latestDetail?.verified_at, undefined as any),
     created_at: asString(item?.created_at, DEFAULT_DATE),
@@ -209,6 +232,7 @@ export function mapPaymentFromBooking(item: any) {
   if (!item?.payment) return null;
   return mapPayment({
     ...item.payment,
+    booking_id: item.id_booking ?? item.id,
     booking: {
       id_booking: item.id_booking,
     },

@@ -6,9 +6,9 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex">
+      <div className="grid min-h-[calc(100vh-4rem)] grid-cols-[16rem_minmax(0,1fr)]">
         <Sidebar />
-        <main className="flex-1">
+        <main className="min-w-0 overflow-x-auto">
           <Outlet />
         </main>
       </div>

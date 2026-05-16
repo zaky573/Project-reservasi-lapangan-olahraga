@@ -323,7 +323,7 @@ export function LandingPage() {
               <div className="space-y-3 text-white/90">
                 <div className="flex items-center space-x-3">
                   <MapPin className="w-5 h-5 text-white flex-shrink-0" />
-                  <span>Jl. Olahraga No. 1, Kota Anda</span>
+                  <span>Jl. Cikutra No. 113, KotaS Bandung</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Phone className="w-5 h-5 text-white flex-shrink-0" />
